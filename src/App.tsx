@@ -105,6 +105,7 @@ function lerpColor(t: number, color1: RGBA, color2: RGBA): RGBA {
 
 /**
  * Perform bilinear interpolation between four colors.
+ * TODO: Other color spaces than RGBA
  * @param parametricValues Colors at the corners of the patch
  * @param dx U coordinate
  * @param dy V coordinate
@@ -337,6 +338,32 @@ function subdividePatch(patch: CoonsPatch): {
   return { northWest, northEast, southWest, southEast };
 }
 
+function coordinatesToPixels<T>(
+  patch: CoonsPatch<T>,
+  canvas: HTMLCanvasElement
+): CoonsPatch<T> {
+  const { height, width } = canvas.getBoundingClientRect();
+  return {
+    ...patch,
+    north: patch.north.map(([x, y]) => [
+      (x / 100) * width,
+      (y / 100) * height,
+    ]) as CubicBezier,
+    south: patch.south.map(([x, y]) => [
+      (x / 100) * width,
+      (y / 100) * height,
+    ]) as CubicBezier,
+    east: patch.east.map(([x, y]) => [
+      (x / 100) * width,
+      (y / 100) * height,
+    ]) as CubicBezier,
+    west: patch.west.map(([x, y]) => [
+      (x / 100) * width,
+      (y / 100) * height,
+    ]) as CubicBezier,
+  };
+}
+
 function renderCoonsPatch(
   originalPatch: CoonsPatch<RGBA>,
   context: CanvasRenderingContext2D
@@ -365,7 +392,7 @@ function renderCoonsPatch(
     const patchPath = new Path2D();
     patchPath.moveTo(north[0][0], north[0][1]); // move to starting point
     for (const curve of [north, east, south, west]) {
-      // TODO: Should we use context.bezierCurveTo instead of context.lineTo?
+      // TODO: would lineTo have better performance?
       patchPath.bezierCurveTo(
         curve[1][0],
         curve[1][1],
@@ -416,28 +443,28 @@ function App() {
 
     const coonsPatch: CoonsPatch<RGBA> = {
       north: [
-        [30, 50],
-        [150, 20],
-        [250, 100],
-        [350, 50],
+        [8, 13],
+        [38, 5],
+        [62, 25],
+        [87, 13],
       ],
       east: [
-        [350, 50],
-        [300, 150],
-        [380, 250],
-        [350, 350],
+        [87, 13],
+        [75, 38],
+        [95, 62],
+        [87, 87],
       ],
       south: [
-        [350, 350],
-        [150, 380],
-        [250, 200],
-        [50, 350],
+        [87, 87],
+        [38, 95],
+        [62, 50],
+        [13, 87],
       ],
       west: [
-        [50, 350],
-        [20, 150],
-        [90, 250],
-        [30, 50],
+        [13, 87],
+        [5, 38],
+        [23, 62],
+        [8, 13],
       ],
       coonsValues: {
         northValue: { r: 255, g: 0, b: 0, a: 255 },
@@ -447,7 +474,7 @@ function App() {
       },
     };
 
-    renderCoonsPatch(coonsPatch, context);
+    renderCoonsPatch(coordinatesToPixels(coonsPatch, canvas), context);
   }, []);
 
   return (
@@ -473,7 +500,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
 
-      <canvas width={400} height={400} ref={canvasRef} />
+      <canvas width={800} height={800} ref={canvasRef} />
     </>
   );
 }
