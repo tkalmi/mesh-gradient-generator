@@ -392,15 +392,7 @@ function renderCoonsPatch(
     const patchPath = new Path2D();
     patchPath.moveTo(north[0][0], north[0][1]); // move to starting point
     for (const curve of [north, east, south, west]) {
-      // TODO: would lineTo have better performance?
-      patchPath.bezierCurveTo(
-        curve[1][0],
-        curve[1][1],
-        curve[2][0],
-        curve[2][1],
-        curve[3][0],
-        curve[3][1]
-      ); // draw curve
+      patchPath.lineTo(curve[3][0], curve[3][1]);
     }
     context.lineWidth = 0;
     patchPath.closePath();
@@ -500,7 +492,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
 
-      <canvas width={800} height={800} ref={canvasRef} />
+      <canvas width={1920} height={800} ref={canvasRef} />
     </>
   );
 }
