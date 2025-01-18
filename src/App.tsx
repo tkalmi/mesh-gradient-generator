@@ -539,6 +539,189 @@ function renderControlPoints(
   }
 }
 
+type TensorPatch<T = RGBA> = {
+  curve0: CubicBezier;
+  curve1: CubicBezier;
+  curve2: CubicBezier;
+  curve3: CubicBezier;
+  tensorValues: ParametricValues<T>;
+};
+
+/**
+ * Creates a Tensor Patch out of a Coons patch.
+ * @param coonsPatch
+ * @returns
+ */
+function coonsToTensorPatch(coonsPatch: CoonsPatch<RGBA>): TensorPatch<RGBA> {
+  const formula = (
+    a: Vec2,
+    b: Vec2,
+    c: Vec2,
+    d: Vec2,
+    e: Vec2,
+    f: Vec2,
+    g: Vec2,
+    h: Vec2
+  ) => {
+    let result = scalePoint(a, -4);
+    result = vectorAdd(result, scalePoint(vectorAdd(b, c), 6));
+    result = vectorSub(result, scalePoint(vectorAdd(d, e), 2));
+    result = vectorAdd(result, scalePoint(vectorAdd(f, g), 3));
+    result = vectorSub(result, h);
+    return scalePoint(result, 1 / 9);
+  };
+
+  const [p03, p13, p23, p33] = coonsPatch.north;
+  const [, p32, p31] = coonsPatch.east;
+  const [p30, p20, p10, p00] = coonsPatch.south;
+  const [, p01, p02] = coonsPatch.west;
+
+  const [sa, sb, sc, sd] = coonsPatch.south;
+  const [, et, eb] = coonsPatch.east;
+  const [, wb, wt] = coonsPatch.west;
+
+  const p11 = formula(p00, p10, p01, p30, p03, p13, p31, p33);
+  const p12 = formula(p03, p13, p02, p33, p00, p10, p32, p30);
+  const p21 = formula(p30, p20, p31, p00, p33, p23, p01, p03);
+  const p22 = formula(p33, p23, p32, p03, p30, p20, p02, p00);
+
+  return {
+    curve0: coonsPatch.north,
+    curve1: [wt, p12, p22, et],
+    curve2: [wb, p11, p21, eb],
+    curve3: [sd, sc, sb, sa],
+    tensorValues: coonsPatch.coonsValues,
+  };
+}
+
+function transposeTensorPatch(patch: TensorPatch<Vec2>): TensorPatch<Vec2> {
+  const { curve0, curve1, curve2, curve3, tensorValues } = patch;
+  const [c00, c01, c02, c03] = curve0;
+  const [c10, c11, c12, c13] = curve1;
+  const [c20, c21, c22, c23] = curve2;
+  const [c30, c31, c32, c33] = curve3;
+  return {
+    curve0: [c00, c10, c20, c30],
+    curve1: [c01, c11, c21, c31],
+    curve2: [c02, c12, c22, c32],
+    curve3: [c03, c13, c23, c33],
+    tensorValues: {
+      northValue: tensorValues.northValue,
+      eastValue: tensorValues.westValue,
+      southValue: tensorValues.southValue,
+      westValue: tensorValues.eastValue,
+    },
+  };
+}
+
+function subdivideHorizontal(
+  tensorValues: ParametricValues<Vec2>
+): [ParametricValues<Vec2>, ParametricValues<Vec2>] {
+  const { northValue, eastValue, southValue, westValue } = tensorValues;
+  const midNorthEast = midPoint(northValue, eastValue);
+  const midSouthWest = midPoint(westValue, southValue);
+
+  return [
+    {
+      northValue,
+      eastValue: midNorthEast,
+      southValue: midSouthWest,
+      westValue,
+    },
+    {
+      northValue: midNorthEast,
+      eastValue,
+      southValue,
+      westValue: midSouthWest,
+    },
+  ];
+}
+
+function horizontalTensorSubdivide(
+  patch: TensorPatch<Vec2>
+): [TensorPatch<Vec2>, TensorPatch<Vec2>] {
+  const [l0, r0] = divideCubicBezier(patch.curve0);
+  const [l1, r1] = divideCubicBezier(patch.curve1);
+  const [l2, r2] = divideCubicBezier(patch.curve2);
+  const [l3, r3] = divideCubicBezier(patch.curve3);
+  const [vl, vr] = subdivideHorizontal(patch.tensorValues);
+
+  return [
+    { curve0: l0, curve1: l1, curve2: l2, curve3: l3, tensorValues: vl },
+    { curve0: r0, curve1: r1, curve2: r2, curve3: r3, tensorValues: vr },
+  ];
+}
+
+function subdivideTensorPatch(patch: TensorPatch<Vec2>) {
+  const [west, east] = horizontalTensorSubdivide(patch);
+  const [northWest, southWest] = horizontalTensorSubdivide(
+    transposeTensorPatch(west)
+  );
+  const [northEast, southEast] = horizontalTensorSubdivide(
+    transposeTensorPatch(east)
+  );
+  return { northWest, northEast, southWest, southEast };
+}
+
+function renderTensorPatch(
+  tensorPatch: TensorPatch<RGBA>,
+  context: CanvasRenderingContext2D
+) {
+  const maxDepth = 5; // maxColorDeepness(originalPatch.coonsValues); TODO: Should we derive this value with a function (e.g., depending on canvas size) or use a constant?
+  const basePatch: TensorPatch<Vec2> = {
+    ...tensorPatch,
+    tensorValues: {
+      northValue: [0, 0],
+      eastValue: [1, 0],
+      southValue: [1, 1],
+      westValue: [0, 1],
+    },
+  };
+
+  // Function to draw the patch uniformly using bilinear interpolation
+  function drawPatchUniform(patch: TensorPatch<Vec2>) {
+    const { curve0, curve3, tensorValues } = patch;
+    const [u, v] = meanValue(Object.values(tensorValues)); // Get mean UV from coonsValues
+
+    const baseColors = tensorPatch.tensorValues;
+    const color = bilinearPixelInterpolation(baseColors, u, v); // Interpolate texture color at UV coordinates
+
+    // Draw the patch
+    const patchPath = new Path2D();
+    patchPath.moveTo(curve0[0][0], curve0[0][1]); // move to starting point
+    patchPath.lineTo(curve3[0][0], curve3[0][1]);
+    patchPath.lineTo(curve3[3][0], curve3[3][1]);
+    patchPath.lineTo(curve0[3][0], curve0[3][1]);
+    patchPath.lineTo(curve0[0][0], curve0[0][1]);
+
+    context.lineWidth = 1;
+    patchPath.closePath();
+    context.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${
+      color.a / 255
+    })`;
+    context.strokeStyle = context.fillStyle;
+    context.stroke(patchPath);
+    context.fill(patchPath);
+  }
+
+  // Recursive function to handle patch subdivision and rendering
+  function go(depth: number, patch: TensorPatch<Vec2>) {
+    if (depth === 0) {
+      drawPatchUniform(patch);
+    } else {
+      const { northWest, northEast, southWest, southEast } =
+        subdivideTensorPatch(patch);
+
+      go(depth - 1, northWest);
+      go(depth - 1, northEast);
+      go(depth - 1, southWest);
+      go(depth - 1, southEast);
+    }
+  }
+
+  go(maxDepth, basePatch);
+}
+
 function App() {
   const [count, setCount] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -573,6 +756,8 @@ function App() {
     ],
   ]);
 
+  const [patchType, setPatchType] = useState<'coons' | 'tensor'>('coons');
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     const context = canvas.getContext('2d')!;
@@ -583,11 +768,16 @@ function App() {
     const patches = getCoonsPatchFromRowsAndColumns(columns, rows);
 
     for (const patch of patches) {
-      renderCoonsPatch(coordinatesToPixels(patch, canvas), context);
+      const coonsPatch = coordinatesToPixels(patch, canvas);
+      if (patchType === 'tensor') {
+        renderTensorPatch(coonsToTensorPatch(coonsPatch), context);
+      } else {
+        renderCoonsPatch(coonsPatch, context);
+      }
     }
 
     renderControlPoints(context, columns, rows);
-  }, [columns, rows]);
+  }, [columns, rows, patchType]);
 
   const lastMouseDownTimestampRef = useRef(0);
   const draggedPointRowAndColumnIndexRef = useRef<
@@ -716,6 +906,38 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <fieldset>
+          <legend>Select patch type</legend>
+          <label>
+            <input
+              type="radio"
+              value="coons"
+              id="coons"
+              name="patchType"
+              checked={patchType === 'coons'}
+              onChange={() => setPatchType('coons')}
+            />{' '}
+            Coons patch
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="tensor"
+              id="tensor"
+              name="patchType"
+              checked={patchType === 'tensor'}
+              onChange={() => setPatchType('tensor')}
+            />{' '}
+            Tensor-product patch
+          </label>
+        </fieldset>
+      </form>
 
       <div style={{ width: 800, height: 600, position: 'relative' }}>
         <canvas
