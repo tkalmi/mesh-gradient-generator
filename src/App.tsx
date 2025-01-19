@@ -868,7 +868,7 @@ function renderCubicBezier(
   vStart: number,
   uEnd: number,
   vEnd: number,
-  context: CanvasRenderingContext2D
+  imageData: ImageData
 ) {
   const baseFfd = bezierToFDCoeff(curve);
   const shiftCount = Math.round(estimateFDStepCount(curve) / 1);
@@ -896,9 +896,12 @@ function renderCubicBezier(
       return;
     }
 
+    const i = (Math.floor(x) + Math.floor(y) * imageData.width) * 4;
     const color = bilinearPixelInterpolation(source, uStart, v);
-    context.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
-    context.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+    imageData.data[i + 0] = color.r;
+    imageData.data[i + 1] = color.g;
+    imageData.data[i + 2] = color.b;
+    imageData.data[i + 3] = color.a;
 
     goUnsafe(
       currentStep + 1,
@@ -944,6 +947,13 @@ function renderTensorPatchWithFFD(
 
   const du = 1 / maxStepCount;
 
+  const imageData = context.getImageData(
+    0,
+    0,
+    context.canvas.clientWidth,
+    context.canvas.clientHeight
+  );
+
   function go(
     i: number,
     points: Vec2[],
@@ -963,13 +973,15 @@ function renderTensorPatchWithFFD(
       0,
       ut,
       1,
-      context
+      imageData
     );
 
     go(i - 1, newPoints, newCoeff, ut + du);
   }
 
   go(maxStepCount, basePoints, ffCoeff, 0);
+
+  context.putImageData(imageData, 0, 0);
 }
 
 function App() {
