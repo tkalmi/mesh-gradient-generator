@@ -102,7 +102,7 @@ function lerpColor(t: number, color1: RGBA, color2: RGBA): RGBA {
     r: lerpWord8(t, color1.r, color2.r),
     g: lerpWord8(t, color1.g, color2.g),
     b: lerpWord8(t, color1.b, color2.b),
-    a: lerpWord8(t, color1.a, color2.a),
+    a: 255, //lerpWord8(t, color1.a, color2.a), // Disabled alpha channel for now.
   };
 }
 
@@ -868,7 +868,8 @@ function renderCubicBezier(
   vStart: number,
   uEnd: number,
   vEnd: number,
-  imageData: ImageData
+  imageData: ImageData,
+  imageWidth: number
 ) {
   const baseFfd = bezierToFDCoeff(curve);
   const shiftCount = estimateFDStepCount(curve);
@@ -895,7 +896,7 @@ function renderCubicBezier(
       return;
     }
 
-    const i = (Math.floor(x) + Math.floor(y) * imageData.width) * 4;
+    const i = (Math.floor(x) + Math.floor(y) * imageWidth) * 4;
     const color = bilinearPixelInterpolation(source, uStart, v);
     imageData.data[i + 0] = color.r;
     imageData.data[i + 1] = color.g;
@@ -932,12 +933,9 @@ function renderTensorPatchWithFFD(
 
   const du = 1 / maxStepCount;
 
-  const imageData = context.getImageData(
-    0,
-    0,
-    context.canvas.clientWidth,
-    context.canvas.clientHeight
-  );
+  const imageWidth = context.canvas.clientWidth;
+  const imageHeight = context.canvas.clientHeight;
+  const imageData = context.getImageData(0, 0, imageWidth, imageHeight);
 
   let points = basePoints;
   let coeffs = ffCoeff;
@@ -957,7 +955,8 @@ function renderTensorPatchWithFFD(
       0,
       ut,
       1,
-      imageData
+      imageData,
+      imageWidth
     );
 
     points = newPoints;
