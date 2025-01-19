@@ -8,7 +8,9 @@ import {
   coonsToTensorPatch,
   coordinatesToPixels,
   renderCoonsPatchWithFFD,
+  renderCoonsPatchWithSubdivision,
   renderTensorPatchWithFFD,
+  renderTensorPatchWithSubdivision,
 } from './meshGradient';
 
 const CONTROL_POINT_RADIUS = 10 as const;
@@ -162,6 +164,9 @@ function App() {
   ]);
 
   const [patchType, setPatchType] = useState<'coons' | 'tensor'>('coons');
+  const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
+    'ffd' | 'subdivision'
+  >('ffd');
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -175,14 +180,25 @@ function App() {
     for (const patch of patches) {
       const coonsPatch = coordinatesToPixels(patch, canvas);
       if (patchType === 'tensor') {
-        renderTensorPatchWithFFD(coonsToTensorPatch(coonsPatch), context);
+        if (rasterizerAlgorithm === 'ffd') {
+          renderTensorPatchWithFFD(coonsToTensorPatch(coonsPatch), context);
+        } else {
+          renderTensorPatchWithSubdivision(
+            coonsToTensorPatch(coonsPatch),
+            context
+          );
+        }
       } else {
-        renderCoonsPatchWithFFD(coonsPatch, context);
+        if (rasterizerAlgorithm === 'ffd') {
+          renderCoonsPatchWithFFD(coonsPatch, context);
+        } else {
+          renderCoonsPatchWithSubdivision(coonsPatch, context);
+        }
       }
     }
 
     renderControlPoints(context, columns, rows);
-  }, [columns, rows, patchType]);
+  }, [columns, rows, patchType, rasterizerAlgorithm]);
 
   const lastMouseDownTimestampRef = useRef(0);
   const draggedPointRowAndColumnIndexRef = useRef<
@@ -340,6 +356,32 @@ function App() {
               onChange={() => setPatchType('tensor')}
             />{' '}
             Tensor-product patch
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Select rasterizer algorithm</legend>
+          <label>
+            <input
+              type="radio"
+              value="ffd"
+              id="ffd"
+              name="rasterizerAlgorithm"
+              checked={rasterizerAlgorithm === 'ffd'}
+              onChange={() => setRasterizerAlgorithm('ffd')}
+            />{' '}
+            Fast-forward differencing
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="subdivision"
+              id="subdivision"
+              name="rasterizerAlgorithm"
+              checked={rasterizerAlgorithm === 'subdivision'}
+              onChange={() => setRasterizerAlgorithm('subdivision')}
+            />{' '}
+            Patch subdivision
           </label>
         </fieldset>
       </form>

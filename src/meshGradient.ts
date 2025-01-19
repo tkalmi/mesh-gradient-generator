@@ -333,7 +333,7 @@ export function coordinatesToPixels<T>(
   };
 }
 
-export function renderCoonsPatch(
+export function renderCoonsPatchWithSubdivision(
   originalPatch: CoonsPatch<RGBA>,
   context: CanvasRenderingContext2D
 ) {
@@ -517,7 +517,7 @@ function subdivideTensorPatch(patch: TensorPatch<Vec2>) {
   return { northWest, northEast, southWest, southEast };
 }
 
-function renderTensorPatch(
+export function renderTensorPatchWithSubdivision(
   tensorPatch: TensorPatch<RGBA>,
   context: CanvasRenderingContext2D
 ) {
