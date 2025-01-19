@@ -882,16 +882,15 @@ function renderCubicBezier(
 
   const [xStart, yStart] = curve[0];
 
-  function goUnsafe(
-    currentStep: number,
-    ax: number,
-    bx: number,
-    ay: number,
-    by: number,
-    x: number,
-    y: number,
-    v: number
-  ) {
+  let ax = xCoeff.fdA;
+  let bx = xCoeff.fdB;
+  let ay = yCoeff.fdA;
+  let by = yCoeff.fdB;
+  let x = xStart;
+  let y = yStart;
+  let v = vStart;
+
+  for (let currentStep = 0; currentStep < maxStepCount; currentStep++) {
     if (currentStep >= maxStepCount) {
       return;
     }
@@ -903,28 +902,14 @@ function renderCubicBezier(
     imageData.data[i + 2] = color.b;
     imageData.data[i + 3] = color.a;
 
-    goUnsafe(
-      currentStep + 1,
-      ax + bx,
-      bx + xCoeff.fdC,
-      ay + by,
-      by + yCoeff.fdC,
-      x + ax,
-      y + ay,
-      v + dv
-    );
+    ax += bx;
+    bx += xCoeff.fdC;
+    ay += by;
+    by += yCoeff.fdC;
+    x += ax;
+    y += ay;
+    v += dv;
   }
-
-  goUnsafe(
-    0,
-    xCoeff.fdA,
-    xCoeff.fdB,
-    yCoeff.fdA,
-    yCoeff.fdB,
-    xStart,
-    yStart,
-    vStart
-  );
 }
 
 /**
@@ -954,17 +939,16 @@ function renderTensorPatchWithFFD(
     context.canvas.clientHeight
   );
 
-  function go(
-    i: number,
-    points: Vec2[],
-    coeffs: ForwardDifferenceCoefficient[][],
-    ut: number
-  ) {
-    if (i == 0) {
-      return;
+  let points = basePoints;
+  let coeffs = ffCoeff;
+  let ut = 0;
+
+  for (let i = maxStepCount; i > 0; i--) {
+    if (i === 0) {
+      continue;
     }
 
-    const [newPoints, newCoeff] = updatePointsAndCoeff(points, coeffs);
+    const [newPoints, newCoeffs] = updatePointsAndCoeff(points, coeffs);
 
     renderCubicBezier(
       tensorValues,
@@ -976,10 +960,10 @@ function renderTensorPatchWithFFD(
       imageData
     );
 
-    go(i - 1, newPoints, newCoeff, ut + du);
+    points = newPoints;
+    coeffs = newCoeffs as Vec2<ForwardDifferenceCoefficient>[];
+    ut += du;
   }
-
-  go(maxStepCount, basePoints, ffCoeff, 0);
 
   context.putImageData(imageData, 0, 0);
 }
