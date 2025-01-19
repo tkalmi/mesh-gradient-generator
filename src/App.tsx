@@ -2,14 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import { CoonsPatch, CubicBezier, RGBA } from './types';
 import { MARGIN } from './constants';
-import {
-  coonsToTensorPatch,
-  coordinatesToPixels,
-  renderCoonsPatchWithFFD,
-  renderCoonsPatchWithSubdivision,
-  renderTensorPatchWithFFD,
-  renderTensorPatchWithSubdivision,
-} from './meshGradient';
+import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
+import { coonsToTensorPatch } from './meshGradient/helpers';
+import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
+import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
+import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
 
 const CONTROL_POINT_RADIUS = 10 as const;
 
@@ -125,6 +122,32 @@ function getCoonsPatchFromRowsAndColumns(
   }
 
   return patches;
+}
+
+function coordinatesToPixels<T>(
+  patch: CoonsPatch<T>,
+  canvas: HTMLCanvasElement
+): CoonsPatch<T> {
+  const { height, width } = canvas.getBoundingClientRect();
+  return {
+    ...patch,
+    north: patch.north.map(([x, y]) => [
+      (x / 100) * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
+      (y / 100) * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+    ]) as CubicBezier,
+    south: patch.south.map(([x, y]) => [
+      (x / 100) * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
+      (y / 100) * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+    ]) as CubicBezier,
+    east: patch.east.map(([x, y]) => [
+      (x / 100) * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
+      (y / 100) * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+    ]) as CubicBezier,
+    west: patch.west.map(([x, y]) => [
+      (x / 100) * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
+      (y / 100) * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+    ]) as CubicBezier,
+  };
 }
 
 function App() {

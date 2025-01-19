@@ -25,3 +25,17 @@ export type CoonsPatch<T = Vec2> = {
   west: CubicBezier; // control points for west curve
   coonsValues: ParametricValues<T>;
 };
+
+export type TensorPatch<T = RGBA> = {
+  curve0: CubicBezier;
+  curve1: CubicBezier;
+  curve2: CubicBezier;
+  curve3: CubicBezier;
+  tensorValues: ParametricValues<T>;
+};
+
+export type ForwardDifferenceCoefficient = {
+  fdA: number;
+  fdB: number;
+  fdC: number;
+};
