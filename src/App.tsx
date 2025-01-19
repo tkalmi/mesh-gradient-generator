@@ -160,7 +160,7 @@ function App() {
     ],
   ]);
 
-  const [patchType, setPatchType] = useState<'coons' | 'tensor'>('coons');
+  const [patchType, setPatchType] = useState<'coons' | 'tensor'>('tensor');
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
   >('ffd');
