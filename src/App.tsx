@@ -7,7 +7,7 @@ import { MARGIN } from './constants';
 import {
   coonsToTensorPatch,
   coordinatesToPixels,
-  renderCoonsPatch,
+  renderCoonsPatchWithFFD,
   renderTensorPatchWithFFD,
 } from './meshGradient';
 
@@ -175,10 +175,9 @@ function App() {
     for (const patch of patches) {
       const coonsPatch = coordinatesToPixels(patch, canvas);
       if (patchType === 'tensor') {
-        // renderTensorPatch(coonsToTensorPatch(coonsPatch), context);
         renderTensorPatchWithFFD(coonsToTensorPatch(coonsPatch), context);
       } else {
-        renderCoonsPatch(coonsPatch, context);
+        renderCoonsPatchWithFFD(coonsPatch, context);
       }
     }
 
