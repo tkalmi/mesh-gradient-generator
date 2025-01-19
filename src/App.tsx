@@ -871,7 +871,7 @@ function renderCubicBezier(
   imageData: ImageData
 ) {
   const baseFfd = bezierToFDCoeff(curve);
-  const shiftCount = Math.round(estimateFDStepCount(curve) / 1);
+  const shiftCount = estimateFDStepCount(curve);
   const maxStepCount = 1 << shiftCount;
 
   const [xCoeff, yCoeff] = baseFfd.map((coeff) =>
