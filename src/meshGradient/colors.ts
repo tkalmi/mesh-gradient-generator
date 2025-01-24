@@ -8,7 +8,7 @@ import { Color, ColorModel, ParametricValues } from '../types';
  * @returns interpolated color value at t
  */
 function lerpWord8(t: number, a: number, b: number): number {
-  return Math.floor((1 - t) * a + t * b);
+  return Math.floor(t * (b - a) + a);
 }
 
 /**
