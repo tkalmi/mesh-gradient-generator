@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
-import { CoonsPatch, CubicBezier, RGBA } from './types';
+import {
+  Color,
+  ColorModel,
+  CoonsPatch,
+  CubicBezier,
+  ParametricValues,
+} from './types';
 import { MARGIN } from './constants';
 import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
 import { coonsToTensorPatch } from './meshGradient/helpers';
@@ -94,9 +100,30 @@ function renderControlPoints(
 
 function getCoonsPatchFromRowsAndColumns(
   columns: CubicBezier[],
-  rows: CubicBezier[]
-): CoonsPatch<RGBA>[] {
-  const patches: CoonsPatch<RGBA>[] = [];
+  rows: CubicBezier[],
+  colorModel: ColorModel
+): CoonsPatch<Color>[] {
+  const patches: CoonsPatch<Color>[] = [];
+  const coonsValues = {
+    rgba: {
+      northValue: [255, 0, 0, 255],
+      eastValue: [0, 255, 0, 255],
+      southValue: [0, 0, 255, 255],
+      westValue: [255, 0, 255, 255],
+    } as ParametricValues<Color>,
+    hsla: {
+      northValue: [0, 100, 50, 255],
+      eastValue: [120, 100, 50, 255],
+      southValue: [240, 100, 50, 255],
+      westValue: [300, 100, 50, 255],
+    } as ParametricValues<Color>,
+    lcha: {
+      northValue: [53.3, 100, 50, 40],
+      eastValue: [87.7, 119.8, 136, 255],
+      southValue: [32.3, 133.8, 306.3, 255],
+      westValue: [60.3, 115.6, 328.2, 255],
+    } as ParametricValues<Color>,
+  }[colorModel];
   for (let i = 1; i < rows.length; i++) {
     for (let j = 1; j < columns.length; j++) {
       const north = rows[j - 1];
@@ -104,17 +131,12 @@ function getCoonsPatchFromRowsAndColumns(
       const west = columns[i - 1].slice().reverse() as CubicBezier;
       const east = columns[i];
 
-      const coonsPatch: CoonsPatch<RGBA> = {
+      const coonsPatch: CoonsPatch<Color> = {
         north,
         east,
         south,
         west,
-        coonsValues: {
-          northValue: { r: 255, g: 0, b: 0, a: 255 },
-          eastValue: { r: 0, g: 255, b: 0, a: 255 },
-          southValue: { r: 0, g: 0, b: 255, a: 255 },
-          westValue: { r: 255, g: 0, b: 255, a: 255 },
-        },
+        coonsValues,
       };
 
       patches.push(coonsPatch);
@@ -124,10 +146,10 @@ function getCoonsPatchFromRowsAndColumns(
   return patches;
 }
 
-function coordinatesToPixels<T>(
-  patch: CoonsPatch<T>,
+function coordinatesToPixels(
+  patch: CoonsPatch<Color>,
   canvas: HTMLCanvasElement
-): CoonsPatch<T> {
+): CoonsPatch<Color> {
   const { height, width } = canvas.getBoundingClientRect();
   return {
     ...patch,
@@ -187,6 +209,7 @@ function App() {
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
   >('ffd');
+  const [colorModel, setColorModel] = useState<ColorModel>('rgba');
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -195,30 +218,28 @@ function App() {
     context.fillStyle = 'black';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const patches = getCoonsPatchFromRowsAndColumns(columns, rows);
+    const patches = getCoonsPatchFromRowsAndColumns(columns, rows, colorModel);
 
     for (const patch of patches) {
       const coonsPatch = coordinatesToPixels(patch, canvas);
       if (patchType === 'tensor') {
+        const tensorPatch = coonsToTensorPatch(coonsPatch);
         if (rasterizerAlgorithm === 'ffd') {
-          renderTensorPatchWithFFD(coonsToTensorPatch(coonsPatch), context);
+          renderTensorPatchWithFFD(tensorPatch, colorModel, context);
         } else {
-          renderTensorPatchWithSubdivision(
-            coonsToTensorPatch(coonsPatch),
-            context
-          );
+          renderTensorPatchWithSubdivision(tensorPatch, colorModel, context);
         }
       } else {
         if (rasterizerAlgorithm === 'ffd') {
-          renderCoonsPatchWithFFD(coonsPatch, context);
+          renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
         } else {
-          renderCoonsPatchWithSubdivision(coonsPatch, context);
+          renderCoonsPatchWithSubdivision(coonsPatch, colorModel, context);
         }
       }
     }
 
     renderControlPoints(context, columns, rows);
-  }, [columns, rows, patchType, rasterizerAlgorithm]);
+  }, [columns, rows, patchType, rasterizerAlgorithm, colorModel]);
 
   const lastMouseDownTimestampRef = useRef(0);
   const draggedPointRowAndColumnIndexRef = useRef<
@@ -381,6 +402,43 @@ function App() {
               onChange={() => setRasterizerAlgorithm('subdivision')}
             />{' '}
             Patch subdivision
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Select color space</legend>
+          <label>
+            <input
+              type="radio"
+              value="rgba"
+              id="rgba"
+              name="colorModel"
+              checked={colorModel === 'rgba'}
+              onChange={() => setColorModel('rgba')}
+            />{' '}
+            RGBA
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="hsla"
+              id="hsla"
+              name="colorModel"
+              checked={colorModel === 'hsla'}
+              onChange={() => setColorModel('hsla')}
+            />{' '}
+            HSL
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="lcha"
+              id="lcha"
+              name="colorModel"
+              checked={colorModel === 'lcha'}
+              onChange={() => setColorModel('lcha')}
+            />{' '}
+            LCH
           </label>
         </fieldset>
       </form>

@@ -1,8 +1,8 @@
 import {
+  Color,
   CubicBezier,
   ForwardDifferenceCoefficient,
   ParametricValues,
-  RGBA,
   Vec2,
 } from '../types';
 import { bilinearPixelInterpolation } from './colors';
@@ -145,14 +145,15 @@ export function updatePointsAndCoeff(
 }
 
 export function renderCubicBezier(
-  source: ParametricValues<RGBA>,
+  source: ParametricValues<Color>,
   curve: CubicBezier,
   uStart: number,
   vStart: number,
   uEnd: number,
   vEnd: number,
   imageData: ImageData,
-  imageWidth: number
+  imageWidth: number,
+  convertToColorModel: (color: Color) => Color
 ) {
   const baseFfd = bezierToFDCoeff(curve);
   const shiftCount = estimateFDStepCount(curve);
@@ -180,11 +181,13 @@ export function renderCubicBezier(
     }
 
     const i = (Math.floor(x) + Math.floor(y) * imageWidth) * 4;
-    const color = bilinearPixelInterpolation(source, uStart, v);
-    imageData.data[i + 0] = color.r;
-    imageData.data[i + 1] = color.g;
-    imageData.data[i + 2] = color.b;
-    imageData.data[i + 3] = color.a;
+    const color = convertToColorModel(
+      bilinearPixelInterpolation(source, uStart, v)
+    );
+    imageData.data[i + 0] = color[0];
+    imageData.data[i + 1] = color[1];
+    imageData.data[i + 2] = color[2];
+    imageData.data[i + 3] = color[3];
 
     ax += bx;
     bx += xCoeff.fdC;

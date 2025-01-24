@@ -4,12 +4,9 @@ export type Vec4<T = number> = [T, T, T, T];
 
 export type CubicBezier = Vec4<Vec2>;
 
-export type RGBA = {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-};
+export type ColorModel = 'rgba' | 'hsla' | 'lcha';
+
+export type Color = Vec4<number>; // This four-value vector represents any four-value color space color, e.g., RGBA, HSL(A), or LCH(A)
 
 export type ParametricValues<T> = {
   northValue: T;
@@ -26,7 +23,7 @@ export type CoonsPatch<T = Vec2> = {
   coonsValues: ParametricValues<T>;
 };
 
-export type TensorPatch<T = RGBA> = {
+export type TensorPatch<T = Color> = {
   curve0: CubicBezier;
   curve1: CubicBezier;
   curve2: CubicBezier;

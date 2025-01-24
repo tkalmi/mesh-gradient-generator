@@ -1,9 +1,21 @@
-import { CoonsPatch, RGBA, TensorPatch, Vec2 } from '../types';
+import { Color, CoonsPatch, TensorPatch, Vec2 } from '../types';
 
+/**
+ * Add two vectors (of length 2) together.
+ * @param v1 vector 1
+ * @param v2 vector 2
+ * @returns v1 + v2
+ */
 export function vectorAdd(v1: Vec2, v2: Vec2): Vec2 {
   return [v1[0] + v2[0], v1[1] + v2[1]];
 }
 
+/**
+ * Subtract vector 2 from vector 1. Both vectors are of length 2
+ * @param v1 vector 1
+ * @param v2 vector 2
+ * @returns v1 - v2
+ */
 export function vectorSub(v1: Vec2, v2: Vec2): Vec2 {
   return [v1[0] - v2[0], v1[1] - v2[1]];
 }
@@ -60,8 +72,8 @@ export function meanValue(points: Vec2[]): Vec2 {
  * @returns
  */
 export function coonsToTensorPatch(
-  coonsPatch: CoonsPatch<RGBA>
-): TensorPatch<RGBA> {
+  coonsPatch: CoonsPatch<Color>
+): TensorPatch<Color> {
   const formula = (
     a: Vec2,
     b: Vec2,

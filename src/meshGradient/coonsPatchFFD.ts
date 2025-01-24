@@ -1,10 +1,12 @@
 import {
+  Color,
+  ColorModel,
   CoonsPatch,
   CubicBezier,
   ForwardDifferenceCoefficient,
-  RGBA,
   Vec2,
 } from '../types';
+import { convertToColorModelFunctions } from './colors';
 import {
   bezierToFDCoeff,
   estimateFDStepCount,
@@ -16,7 +18,8 @@ import {
 import { lerp } from './helpers';
 
 export function renderCoonsPatchWithFFD(
-  patch: CoonsPatch<RGBA>,
+  patch: CoonsPatch<Color>,
+  colorModel: ColorModel,
   context: CanvasRenderingContext2D
 ) {
   const { north, east, south, west, coonsValues } = patch;
@@ -54,6 +57,8 @@ export function renderCoonsPatchWithFFD(
   const imageHeight = context.canvas.clientHeight;
   const imageData = context.getImageData(0, 0, imageWidth, imageHeight);
 
+  const convertToColorModel = convertToColorModelFunctions[colorModel];
+
   let points = basePoints;
   let coeffs = ffCoeff;
   let ut = 0;
@@ -73,7 +78,8 @@ export function renderCoonsPatchWithFFD(
       ut,
       1,
       imageData,
-      imageWidth
+      imageWidth,
+      convertToColorModel
     );
 
     points = newPoints;

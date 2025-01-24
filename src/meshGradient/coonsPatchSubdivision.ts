@@ -1,11 +1,12 @@
 import {
+  Color,
+  ColorModel,
   CoonsPatch,
   CubicBezier,
   ParametricValues,
-  RGBA,
   Vec2,
 } from '../types';
-import { bilinearPixelInterpolation } from './colors';
+import { bilinearPixelInterpolation, colorToStringFuncs } from './colors';
 import { lerp, meanValue, midPoint, vectorAdd, vectorSub } from './helpers';
 import { divideCubicBezier } from './patchSubdivision';
 
@@ -195,7 +196,8 @@ function subdividePatch(patch: CoonsPatch): {
 }
 
 export function renderCoonsPatchWithSubdivision(
-  originalPatch: CoonsPatch<RGBA>,
+  originalPatch: CoonsPatch<Color>,
+  colorModel: ColorModel,
   context: CanvasRenderingContext2D
 ) {
   const maxDepth = 5; // maxColorDeepness(originalPatch.coonsValues); TODO: Should we derive this value with a function (e.g., depending on canvas size) or use a constant?
@@ -208,6 +210,8 @@ export function renderCoonsPatchWithSubdivision(
       westValue: [0, 1],
     },
   };
+
+  const colorToString = colorToStringFuncs[colorModel];
 
   // Function to draw the patch uniformly using bilinear interpolation
   function drawPatchUniform(patch: CoonsPatch<Vec2>) {
@@ -226,9 +230,7 @@ export function renderCoonsPatchWithSubdivision(
     }
     context.lineWidth = 0;
     patchPath.closePath();
-    context.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${
-      color.a / 255
-    })`;
+    context.fillStyle = colorToString(color);
     context.strokeStyle = context.fillStyle;
     context.stroke(patchPath);
     context.fill(patchPath);

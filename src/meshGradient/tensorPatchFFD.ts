@@ -7,18 +7,21 @@ import {
   updatePointsAndCoeff,
 } from './fastForwardDifferencing';
 import {
+  Color,
+  ColorModel,
   CubicBezier,
   ForwardDifferenceCoefficient,
-  RGBA,
   TensorPatch,
   Vec2,
 } from '../types';
+import { convertToColorModelFunctions } from './colors';
 
 /**
  * Rasterize patch using Fast-Forward Differencing algorithm
  */
 export function renderTensorPatchWithFFD(
-  patch: TensorPatch<RGBA>,
+  patch: TensorPatch<Color>,
+  colorModel: ColorModel,
   context: CanvasRenderingContext2D
 ) {
   const { curve0, curve1, curve2, curve3, tensorValues } = patch;
@@ -37,6 +40,8 @@ export function renderTensorPatchWithFFD(
   const imageWidth = context.canvas.clientWidth;
   const imageHeight = context.canvas.clientHeight;
   const imageData = context.getImageData(0, 0, imageWidth, imageHeight);
+
+  const convertToColorModel = convertToColorModelFunctions[colorModel];
 
   let points = basePoints;
   let coeffs = ffCoeff;
@@ -57,7 +62,8 @@ export function renderTensorPatchWithFFD(
       ut,
       1,
       imageData,
-      imageWidth
+      imageWidth,
+      convertToColorModel
     );
 
     points = newPoints;
