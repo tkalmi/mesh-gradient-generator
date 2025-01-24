@@ -209,7 +209,7 @@ function App() {
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
   >('ffd');
-  const [colorModel, setColorModel] = useState<ColorModel>('rgba');
+  const [colorModel, setColorModel] = useState<ColorModel>('hsla');
 
   useEffect(() => {
     const canvas = canvasRef.current!;

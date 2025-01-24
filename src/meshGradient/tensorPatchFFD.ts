@@ -14,7 +14,7 @@ import {
   TensorPatch,
   Vec2,
 } from '../types';
-import { convertToColorModelFunctions } from './colors';
+import { colorToStringFuncs } from './colors';
 
 /**
  * Rasterize patch using Fast-Forward Differencing algorithm
@@ -39,37 +39,77 @@ export function renderTensorPatchWithFFD(
 
   const imageWidth = context.canvas.clientWidth;
   const imageHeight = context.canvas.clientHeight;
-  const imageData = context.getImageData(0, 0, imageWidth, imageHeight);
-
-  const convertToColorModel = convertToColorModelFunctions[colorModel];
 
   let points = basePoints;
   let coeffs = ffCoeff;
   let ut = 0;
 
-  for (let i = maxStepCount; i > 0; i--) {
-    if (i === 0) {
-      continue;
+  if (colorModel === 'rgba') {
+    // If in RGBA mode, use ImageData, as that's the most efficient way
+
+    const imageData = context.getImageData(0, 0, imageWidth, imageHeight);
+
+    for (let i = maxStepCount; i > 0; i--) {
+      if (i === 0) {
+        continue;
+      }
+
+      const [newPoints, newCoeffs] = updatePointsAndCoeff(points, coeffs);
+
+      renderCubicBezier(
+        tensorValues,
+        points as CubicBezier,
+        ut,
+        0,
+        ut,
+        1,
+        imageData.data,
+        imageWidth
+      );
+
+      points = newPoints;
+      coeffs = newCoeffs as Vec2<ForwardDifferenceCoefficient>[];
+      ut += du;
     }
 
-    const [newPoints, newCoeffs] = updatePointsAndCoeff(points, coeffs);
+    context.putImageData(imageData, 0, 0);
+  } else {
+    // If in HSL or LCH, draw pixel-sized rectangles to avoid having to convert to RGBA
 
-    renderCubicBezier(
-      tensorValues,
-      points as CubicBezier,
-      ut,
-      0,
-      ut,
-      1,
-      imageData,
-      imageWidth,
-      convertToColorModel
-    );
+    const colorToString = colorToStringFuncs[colorModel];
+    const pixels: number[] = new Array(imageWidth * imageHeight * 4).fill(0);
 
-    points = newPoints;
-    coeffs = newCoeffs as Vec2<ForwardDifferenceCoefficient>[];
-    ut += du;
+    for (let i = maxStepCount; i > 0; i--) {
+      if (i === 0) {
+        continue;
+      }
+
+      const [newPoints, newCoeffs] = updatePointsAndCoeff(points, coeffs);
+
+      renderCubicBezier(
+        tensorValues,
+        points as CubicBezier,
+        ut,
+        0,
+        ut,
+        1,
+        pixels,
+        imageWidth
+      );
+
+      points = newPoints;
+      coeffs = newCoeffs as Vec2<ForwardDifferenceCoefficient>[];
+      ut += du;
+    }
+
+    for (let y = 0; y < imageHeight; y++) {
+      for (let x = 0; x < imageWidth; x++) {
+        const start = (y * imageWidth + x) * 4;
+        context.fillStyle = colorToString(
+          pixels.slice(start, start + 4) as Color
+        );
+        context.fillRect(x, y, 1, 1);
+      }
+    }
   }
-
-  context.putImageData(imageData, 0, 0);
 }
