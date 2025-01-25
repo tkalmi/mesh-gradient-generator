@@ -405,9 +405,15 @@ function App() {
       }
 
       const container = containerRef.current as HTMLDivElement;
-      container!.style.cursor = 'default';
+      if (
+        getHoveredColumnAndRowPointIndexes(event).some((ind) => ind != null)
+      ) {
+        container.style.cursor = 'grab';
+      } else {
+        container.style.cursor = 'default';
+      }
     },
-    []
+    [getHoveredColumnAndRowPointIndexes]
   );
 
   const maxSubdivisions = 8; /* 
