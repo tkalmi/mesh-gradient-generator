@@ -47,12 +47,13 @@ export function bilinearPixelInterpolation(
   return lerpColor(dy, colorTop, colorBottom); // Interpolate between top and bottom colors
 }
 
+const div255 = 1 / 255;
 export const colorToStringFuncs: Record<ColorModel, (color: Color) => string> =
   {
     rgba: (color: Color) =>
-      `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3] / 255})`,
+      `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3] * div255})`,
     hsla: (color: Color) =>
-      `hsla(${color[0]}, ${color[1]}%, ${color[2]}%, ${color[3] / 255})`,
+      `hsla(${color[0]}, ${color[1]}%, ${color[2]}%, ${color[3] * div255})`,
     lcha: (color: Color) =>
-      `lch(${color[0]}% ${color[1]} ${color[2]} / ${color[3]})`,
+      `lch(${color[0]}% ${color[1]} ${color[2]} / ${color[3] * div255})`,
   } as const;
