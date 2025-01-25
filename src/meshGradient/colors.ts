@@ -1,14 +1,14 @@
 import { Color, ColorModel, ParametricValues } from '../types';
 
 /**
- * Get linear interpolation between two 8-bit color values.
+ * Get linear interpolation between two numbers.
  * @param t float from 0 to 1
- * @param a color value a
- * @param b color value b
- * @returns interpolated color value at t
+ * @param a value a
+ * @param b value b
+ * @returns interpolated value at t
  */
-function lerpWord8(t: number, a: number, b: number): number {
-  return Math.floor(t * (b - a) + a);
+function lerp(t: number, a: number, b: number): number {
+  return t * (b - a) + a;
 }
 
 /**
@@ -20,9 +20,9 @@ function lerpWord8(t: number, a: number, b: number): number {
  */
 function lerpColor(t: number, color1: Color, color2: Color): Color {
   return [
-    lerpWord8(t, color1[0], color2[0]),
-    lerpWord8(t, color1[1], color2[1]),
-    lerpWord8(t, color1[2], color2[2]),
+    lerp(t, color1[0], color2[0]),
+    lerp(t, color1[1], color2[1]),
+    lerp(t, color1[2], color2[2]),
     255, // lerpWord8(t, color1[0], color2[0]), // Disabled alpha channel for now
   ];
 }
