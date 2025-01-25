@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
-import {
-  Color,
-  ColorModel,
-  CoonsPatch,
-  CubicBezier,
-  ParametricValues,
-} from './types';
+import { Color, ColorModel, CoonsPatch, CubicBezier } from './types';
 import { MARGIN } from './constants';
 import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
 import { clamp, coonsToTensorPatch } from './meshGradient/helpers';
 import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
 import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
 import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
+import {
+  hexToRgb,
+  rgbaToHex,
+  rgbaToHsla,
+  rgbaToLcha,
+} from './meshGradient/colors';
 
 const CONTROL_POINT_RADIUS = 10 as const;
 
@@ -101,29 +101,9 @@ function renderControlPoints(
 function getCoonsPatchFromRowsAndColumns(
   columns: CubicBezier[],
   rows: CubicBezier[],
-  colorModel: ColorModel
+  colors: Color[]
 ): CoonsPatch<Color>[] {
   const patches: CoonsPatch<Color>[] = [];
-  const coonsValues = {
-    rgba: {
-      northValue: [255, 0, 0, 255],
-      eastValue: [0, 255, 0, 255],
-      southValue: [0, 0, 255, 255],
-      westValue: [255, 0, 255, 255],
-    } as ParametricValues<Color>,
-    hsla: {
-      northValue: [0, 100, 50, 255],
-      eastValue: [120, 100, 50, 255],
-      southValue: [240, 100, 50, 255],
-      westValue: [300, 100, 50, 255],
-    } as ParametricValues<Color>,
-    lcha: {
-      northValue: [53.3, 100, 50, 40],
-      eastValue: [87.7, 119.8, 136, 255],
-      southValue: [32.3, 133.8, 306.3, 255],
-      westValue: [60.3, 115.6, 328.2, 255],
-    } as ParametricValues<Color>,
-  }[colorModel];
   for (let i = 1; i < rows.length; i++) {
     for (let j = 1; j < columns.length; j++) {
       const north = rows[j - 1];
@@ -136,7 +116,12 @@ function getCoonsPatchFromRowsAndColumns(
         east,
         south,
         west,
-        coonsValues,
+        coonsValues: {
+          northValue: colors[(j - 1) * 2],
+          eastValue: colors[(j - 1) * 2 + 1],
+          southValue: colors[j * 2 + 1],
+          westValue: colors[j * 2],
+        },
       };
 
       patches.push(coonsPatch);
@@ -155,6 +140,7 @@ function App() {
     height: number;
     width: number;
   }>({ left: 0, top: 0, height: 600, width: 800 });
+  const colorPickerRef = useRef<HTMLInputElement>(null);
 
   const [rows, setRows] = useState<CubicBezier[]>([
     [
@@ -186,12 +172,35 @@ function App() {
     ],
   ]);
 
+  // In RGBA, two for each row
+  const [colors, setColors] = useState<Color[]>([
+    [255, 0, 0, 255],
+    [0, 255, 0, 255],
+    [255, 0, 255, 255],
+    [0, 0, 255, 255],
+  ]);
+
   const [patchType, setPatchType] = useState<'coons' | 'tensor'>('tensor');
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
   >('ffd');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(5);
+
+  const [activeColorIndex, setActiveColorIndex] = useState<number | null>(null);
+
+  const convertedColors = useMemo(() => {
+    // Convert to proper color model here if necessary
+    switch (colorModel) {
+      case 'hsla':
+        return colors.map((color) => rgbaToHsla(color));
+      case 'lcha':
+        return colors.map((color) => rgbaToLcha(color));
+      case 'rgba':
+      default:
+        return colors;
+    }
+  }, [colors, colorModel]);
 
   const coordinatesToPixels = useCallback(
     (patch: CoonsPatch<Color>): CoonsPatch<Color> => {
@@ -226,7 +235,11 @@ function App() {
     context.fillStyle = 'black';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const patches = getCoonsPatchFromRowsAndColumns(columns, rows, colorModel);
+    const patches = getCoonsPatchFromRowsAndColumns(
+      columns,
+      rows,
+      convertedColors
+    );
 
     for (const patch of patches) {
       const coonsPatch = coordinatesToPixels(patch);
@@ -265,6 +278,7 @@ function App() {
     colorModel,
     coordinatesToPixels,
     subdivisionCount,
+    convertedColors,
   ]);
 
   useEffect(() => {
@@ -328,6 +342,13 @@ function App() {
     (event: React.MouseEvent<HTMLCanvasElement>) => {
       lastMouseDownTimestampRef.current = performance.now();
 
+      if (
+        activeColorIndex &&
+        event.currentTarget.closest('input') !== colorPickerRef.current
+      ) {
+        setActiveColorIndex(null);
+      }
+
       const [columnPointIndex, rowPointIndex] =
         getHoveredColumnAndRowPointIndexes(event);
 
@@ -336,7 +357,7 @@ function App() {
         rowPointIndex,
       ];
     },
-    [getHoveredColumnAndRowPointIndexes]
+    [getHoveredColumnAndRowPointIndexes, activeColorIndex]
   );
 
   const handleMouseMove = useCallback(
@@ -398,16 +419,24 @@ function App() {
   const handleMouseUp = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       draggedPointRowAndColumnIndexRef.current = [null, null];
+      const hoveredColumnAndRowPointIndexes =
+        getHoveredColumnAndRowPointIndexes(event);
       // Detect if the mouse was dragged or clicked by comparing
       if (performance.now() - lastMouseDownTimestampRef.current < 200) {
-        // TODO: If it was clicked, open color palette
-        console.log('Clicked!');
+        // If it was clicked on top of a corner control point, open color palette
+        const rowPointIndex = hoveredColumnAndRowPointIndexes[1];
+        if (rowPointIndex != null && [0, 3].includes(rowPointIndex[1])) {
+          setActiveColorIndex(rowPointIndex[0] * 2 + (rowPointIndex[1] % 2));
+          setTimeout(() => colorPickerRef.current?.click(), 50); // Set a minor delay to give the color picker time to position right
+        } else {
+          setActiveColorIndex(null);
+        }
+      } else {
+        setActiveColorIndex(null);
       }
 
       const container = containerRef.current as HTMLDivElement;
-      if (
-        getHoveredColumnAndRowPointIndexes(event).some((ind) => ind != null)
-      ) {
+      if (hoveredColumnAndRowPointIndexes.some((ind) => ind != null)) {
         container.style.cursor = 'grab';
       } else {
         container.style.cursor = 'default';
@@ -522,7 +551,7 @@ function App() {
                 checked={colorModel === 'rgba'}
                 onChange={() => setColorModel('rgba')}
               />{' '}
-              RGBA
+              RGB
             </label>
             <label>
               <input
@@ -550,6 +579,41 @@ function App() {
         </form>
 
         <div style={{ width: 800, height: 600, position: 'relative' }}>
+          <input
+            style={{
+              opacity: 0,
+              visibility: 'hidden',
+              width: 0,
+              height: 0,
+              position: 'absolute',
+              top: convertYToCanvasY(
+                rows[Math.floor((activeColorIndex ?? 0) / 2)][
+                  (activeColorIndex ?? 0) % 2 ? 3 : 0
+                ][1],
+                canvasRef.current?.height ?? 0
+              ),
+              left: convertXToCanvasX(
+                rows[Math.floor((activeColorIndex ?? 0) / 2)][
+                  (activeColorIndex ?? 0) % 2 ? 3 : 0
+                ][0],
+                canvasRef.current?.width ?? 0
+              ),
+              pointerEvents: activeColorIndex == null ? 'none' : 'auto',
+            }}
+            type="color"
+            id="color-picker"
+            value={rgbaToHex(colors[activeColorIndex ?? 0])}
+            autoFocus
+            onChange={(event: React.FormEvent<HTMLInputElement>) => {
+              const value = event.currentTarget.value;
+              setColors((prevColors) =>
+                prevColors.map((color, ind) =>
+                  ind === activeColorIndex ? hexToRgb(value) : color
+                )
+              );
+            }}
+            ref={colorPickerRef}
+          />
           <canvas
             width={800}
             height={600}
