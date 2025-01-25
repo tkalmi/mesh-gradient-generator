@@ -174,6 +174,7 @@ function coordinatesToPixels(
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [rows, setRows] = useState<CubicBezier[]>([
     [
@@ -209,7 +210,7 @@ function App() {
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
   >('ffd');
-  const [colorModel, setColorModel] = useState<ColorModel>('hsla');
+  const [colorModel, setColorModel] = useState<ColorModel>('rgba');
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -246,11 +247,11 @@ function App() {
     [[number, number] | null, [number, number] | null]
   >([null, null]);
 
-  const handleMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
-      lastMouseDownTimestampRef.current = performance.now();
-
-      const canvas = event.target as HTMLCanvasElement;
+  const getHoveredColumnAndRowPointIndexes = useCallback(
+    (
+      event: React.MouseEvent<HTMLElement>
+    ): [[number, number] | null, [number, number] | null] => {
+      const canvas = canvasRef.current as HTMLCanvasElement;
       const { left, top, width, height } = canvas.getBoundingClientRect();
       const x = event.clientX - left;
       const y = event.clientY - top;
@@ -281,24 +282,45 @@ function App() {
           ? ([Math.floor(rowPoint / 4), rowPoint % 4] as [number, number])
           : null;
 
+      return [columnPointIndex, rowPointIndex];
+    },
+    [columns, rows]
+  );
+
+  const handleMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      lastMouseDownTimestampRef.current = performance.now();
+
+      const [columnPointIndex, rowPointIndex] =
+        getHoveredColumnAndRowPointIndexes(event);
+
       draggedPointRowAndColumnIndexRef.current = [
         columnPointIndex,
         rowPointIndex,
       ];
     },
-    [columns, rows]
+    [getHoveredColumnAndRowPointIndexes]
   );
 
   const handleMouseMove = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const canvas = canvasRef.current as HTMLCanvasElement;
+      const container = containerRef.current as HTMLDivElement;
       if (
         draggedPointRowAndColumnIndexRef.current.every(
           (index) => index === null
         )
       ) {
+        if (
+          getHoveredColumnAndRowPointIndexes(event).some((ind) => ind != null)
+        ) {
+          container.style.cursor = 'grab';
+        } else {
+          container.style.cursor = 'default';
+        }
         return;
       }
-      const canvas = event.target as HTMLCanvasElement;
+      container.style.cursor = 'grabbing';
       const { left, top, height, width } = canvas.getBoundingClientRect();
       const x =
         ((Math.min(
@@ -334,127 +356,137 @@ function App() {
         });
       }
     },
-    []
+    [getHoveredColumnAndRowPointIndexes]
   );
 
   const handleMouseUp = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
+    (event: React.MouseEvent<HTMLDivElement>) => {
       draggedPointRowAndColumnIndexRef.current = [null, null];
-      // TODO: detect if the mouse was dragged or clicked
-      // If it was clicked, open color palette
+      // Detect if the mouse was dragged or clicked by comparing
+      if (performance.now() - lastMouseDownTimestampRef.current < 200) {
+        // TODO: If it was clicked, open color palette
+        console.log('Clicked!');
+      }
+
+      const container = containerRef.current as HTMLDivElement;
+      container!.style.cursor = 'default';
     },
     []
   );
 
   return (
-    <>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-        }}
-      >
-        <fieldset>
-          <legend>Select patch type</legend>
-          <label>
-            <input
-              type="radio"
-              value="coons"
-              id="coons"
-              name="patchType"
-              checked={patchType === 'coons'}
-              onChange={() => setPatchType('coons')}
-            />{' '}
-            Coons patch
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="tensor"
-              id="tensor"
-              name="patchType"
-              checked={patchType === 'tensor'}
-              onChange={() => setPatchType('tensor')}
-            />{' '}
-            Tensor-product patch
-          </label>
-        </fieldset>
+    <div
+      className="hover-container"
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      ref={containerRef}
+    >
+      <div className="main-container">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+          }}
+        >
+          <fieldset>
+            <legend>Select patch type</legend>
+            <label>
+              <input
+                type="radio"
+                value="coons"
+                id="coons"
+                name="patchType"
+                checked={patchType === 'coons'}
+                onChange={() => setPatchType('coons')}
+              />{' '}
+              Coons patch
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="tensor"
+                id="tensor"
+                name="patchType"
+                checked={patchType === 'tensor'}
+                onChange={() => setPatchType('tensor')}
+              />{' '}
+              Tensor-product patch
+            </label>
+          </fieldset>
 
-        <fieldset>
-          <legend>Select rasterizer algorithm</legend>
-          <label>
-            <input
-              type="radio"
-              value="ffd"
-              id="ffd"
-              name="rasterizerAlgorithm"
-              checked={rasterizerAlgorithm === 'ffd'}
-              onChange={() => setRasterizerAlgorithm('ffd')}
-            />{' '}
-            Fast-forward differencing
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="subdivision"
-              id="subdivision"
-              name="rasterizerAlgorithm"
-              checked={rasterizerAlgorithm === 'subdivision'}
-              onChange={() => setRasterizerAlgorithm('subdivision')}
-            />{' '}
-            Patch subdivision
-          </label>
-        </fieldset>
+          <fieldset>
+            <legend>Select rasterizer algorithm</legend>
+            <label>
+              <input
+                type="radio"
+                value="ffd"
+                id="ffd"
+                name="rasterizerAlgorithm"
+                checked={rasterizerAlgorithm === 'ffd'}
+                onChange={() => setRasterizerAlgorithm('ffd')}
+              />{' '}
+              Fast-forward differencing
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="subdivision"
+                id="subdivision"
+                name="rasterizerAlgorithm"
+                checked={rasterizerAlgorithm === 'subdivision'}
+                onChange={() => setRasterizerAlgorithm('subdivision')}
+              />{' '}
+              Patch subdivision
+            </label>
+          </fieldset>
 
-        <fieldset>
-          <legend>Select color space</legend>
-          <label>
-            <input
-              type="radio"
-              value="rgba"
-              id="rgba"
-              name="colorModel"
-              checked={colorModel === 'rgba'}
-              onChange={() => setColorModel('rgba')}
-            />{' '}
-            RGBA
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="hsla"
-              id="hsla"
-              name="colorModel"
-              checked={colorModel === 'hsla'}
-              onChange={() => setColorModel('hsla')}
-            />{' '}
-            HSL
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="lcha"
-              id="lcha"
-              name="colorModel"
-              checked={colorModel === 'lcha'}
-              onChange={() => setColorModel('lcha')}
-            />{' '}
-            LCH
-          </label>
-        </fieldset>
-      </form>
+          <fieldset>
+            <legend>Select color space</legend>
+            <label>
+              <input
+                type="radio"
+                value="rgba"
+                id="rgba"
+                name="colorModel"
+                checked={colorModel === 'rgba'}
+                onChange={() => setColorModel('rgba')}
+              />{' '}
+              RGBA
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="hsla"
+                id="hsla"
+                name="colorModel"
+                checked={colorModel === 'hsla'}
+                onChange={() => setColorModel('hsla')}
+              />{' '}
+              HSL
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="lcha"
+                id="lcha"
+                name="colorModel"
+                checked={colorModel === 'lcha'}
+                onChange={() => setColorModel('lcha')}
+              />{' '}
+              LCH
+            </label>
+          </fieldset>
+        </form>
 
-      <div style={{ width: 800, height: 600, position: 'relative' }}>
-        <canvas
-          width={800}
-          height={600}
-          ref={canvasRef}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          onMouseOut={handleMouseUp}
-        />
+        <div style={{ width: 800, height: 600, position: 'relative' }}>
+          <canvas
+            width={800}
+            height={600}
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+          />
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
