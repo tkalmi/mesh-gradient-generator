@@ -198,9 +198,9 @@ function subdividePatch(patch: CoonsPatch): {
 export function renderCoonsPatchWithSubdivision(
   originalPatch: CoonsPatch<Color>,
   colorModel: ColorModel,
+  maxDepth: number,
   context: CanvasRenderingContext2D
 ) {
-  const maxDepth = 5; // maxColorDeepness(originalPatch.coonsValues); TODO: Should we derive this value with a function (e.g., depending on canvas size) or use a constant?
   const basePatch: CoonsPatch<Vec2> = {
     ...originalPatch,
     coonsValues: {

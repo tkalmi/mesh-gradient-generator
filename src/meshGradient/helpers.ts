@@ -114,3 +114,14 @@ export function coonsToTensorPatch(
     tensorValues: coonsPatch.coonsValues,
   };
 }
+
+/**
+ * Return value clamped between min and max
+ * @param min minimum value this function may return
+ * @param max maximum value this function may return
+ * @param value value to clamp
+ * @returns clamped value
+ */
+export function clamp(min: number, max: number, value: number): number {
+  return Math.min(max, Math.max(min, value));
+}

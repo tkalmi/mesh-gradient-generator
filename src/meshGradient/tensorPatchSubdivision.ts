@@ -81,9 +81,9 @@ function subdivideTensorPatch(patch: TensorPatch<Vec2>) {
 export function renderTensorPatchWithSubdivision(
   tensorPatch: TensorPatch<Color>,
   colorModel: ColorModel,
+  maxDepth: number,
   context: CanvasRenderingContext2D
 ) {
-  const maxDepth = 5; // maxColorDeepness(originalPatch.coonsValues); TODO: Should we derive this value with a function (e.g., depending on canvas size) or use a constant?
   const basePatch: TensorPatch<Vec2> = {
     ...tensorPatch,
     tensorValues: {

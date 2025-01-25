@@ -9,7 +9,7 @@ import {
 } from './types';
 import { MARGIN } from './constants';
 import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
-import { coonsToTensorPatch } from './meshGradient/helpers';
+import { clamp, coonsToTensorPatch } from './meshGradient/helpers';
 import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
 import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
 import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
@@ -191,6 +191,7 @@ function App() {
     'ffd' | 'subdivision'
   >('ffd');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
+  const [subdivisionCount, setSubdivisionCount] = useState(5);
 
   const coordinatesToPixels = useCallback(
     (patch: CoonsPatch<Color>): CoonsPatch<Color> => {
@@ -234,13 +235,23 @@ function App() {
         if (rasterizerAlgorithm === 'ffd') {
           renderTensorPatchWithFFD(tensorPatch, colorModel, context);
         } else {
-          renderTensorPatchWithSubdivision(tensorPatch, colorModel, context);
+          renderTensorPatchWithSubdivision(
+            tensorPatch,
+            colorModel,
+            subdivisionCount,
+            context
+          );
         }
       } else {
         if (rasterizerAlgorithm === 'ffd') {
           renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
         } else {
-          renderCoonsPatchWithSubdivision(coonsPatch, colorModel, context);
+          renderCoonsPatchWithSubdivision(
+            coonsPatch,
+            colorModel,
+            subdivisionCount,
+            context
+          );
         }
       }
     }
@@ -253,6 +264,7 @@ function App() {
     rasterizerAlgorithm,
     colorModel,
     coordinatesToPixels,
+    subdivisionCount,
   ]);
 
   useEffect(() => {
@@ -398,6 +410,15 @@ function App() {
     []
   );
 
+  const maxSubdivisions = 8; /* 
+  Theoretically the maximum depth should be something like this, but it's pretty heavy, so limit it to 8, which is the upper limit for my MBP.
+  Math.round(
+    Math.max(
+      Math.log2(canvasDimensionsRef.current.width / (columns.length - 1)),
+      Math.log2(canvasDimensionsRef.current.height / (rows.length - 1))
+    )
+  ); */
+
   return (
     <div
       className="hover-container"
@@ -460,6 +481,27 @@ function App() {
                 onChange={() => setRasterizerAlgorithm('subdivision')}
               />{' '}
               Patch subdivision
+            </label>
+            <label>
+              <input
+                style={{ marginInline: '0.5em' }}
+                id="subdivision-count"
+                disabled={rasterizerAlgorithm !== 'subdivision'}
+                value={subdivisionCount}
+                onChange={(event) =>
+                  setSubdivisionCount(
+                    clamp(
+                      0,
+                      maxSubdivisions,
+                      Math.round(Number(event.target.value ?? 0))
+                    )
+                  )
+                }
+                type="number"
+                min={0}
+                max={maxSubdivisions}
+              />
+              subdivisions
             </label>
           </fieldset>
 
