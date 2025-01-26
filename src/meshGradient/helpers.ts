@@ -1,3 +1,4 @@
+import { MARGIN } from '../constants';
 import { Color, CoonsPatch, TensorPatch, Vec2 } from '../types';
 
 /**
@@ -124,4 +125,24 @@ export function coonsToTensorPatch(
  */
 export function clamp(min: number, max: number, value: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Converts x from percentage value [0, 100] to pixel coordinate value [margin_left, canvas_width - margin_x]
+ * @param x percentage value to convert
+ * @param width width of canvas
+ * @returns converted x
+ */
+export function convertXToCanvasX(x: number, width: number): number {
+  return x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left;
+}
+
+/**
+ * Converts y from percentage value [0, 100] to pixel coordinate value [margin_top, canvas_height - margin_y]
+ * @param y percentage value to convert
+ * @param height height of canvas
+ * @returns converted y
+ */
+export function convertYToCanvasY(y: number, height: number): number {
+  return y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top;
 }

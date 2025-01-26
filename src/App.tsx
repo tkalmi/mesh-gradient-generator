@@ -1,102 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import { Color, ColorModel, CoonsPatch, CubicBezier } from './types';
-import { MARGIN } from './constants';
-import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
-import { clamp, coonsToTensorPatch } from './meshGradient/helpers';
-import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
-import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
-import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
+import { CONTROL_POINT_RADIUS, MARGIN } from './constants';
+import {
+  clamp,
+  convertXToCanvasX,
+  convertYToCanvasY,
+  coonsToTensorPatch,
+} from './meshGradient/helpers';
 import {
   hexToRgb,
   rgbaToHex,
   rgbaToHsla,
   rgbaToLcha,
 } from './meshGradient/colors';
-
-const CONTROL_POINT_RADIUS = 10 as const;
-
-function convertXToCanvasX(x: number, width: number): number {
-  return x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left;
-}
-
-function convertYToCanvasY(y: number, height: number): number {
-  return y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top;
-}
-
-function renderControlPoints(
-  context: CanvasRenderingContext2D,
-  columns: CubicBezier[],
-  rows: CubicBezier[]
-) {
-  const width = context.canvas.width;
-  const height = context.canvas.height;
-  context.fillStyle = 'white';
-  context.strokeStyle = '#5a5a5a';
-  context.lineWidth = 2;
-
-  for (const column of columns) {
-    context.strokeStyle = '#5a5a5a';
-    for (const point of column) {
-      context.beginPath();
-      context.arc(
-        convertXToCanvasX(point[0], width),
-        convertYToCanvasY(point[1], height),
-        CONTROL_POINT_RADIUS,
-        0,
-        2 * Math.PI
-      );
-      context.stroke();
-      context.fill();
-    }
-
-    context.strokeStyle = 'white';
-    context.moveTo(
-      convertXToCanvasX(column[0][0], width),
-      convertYToCanvasY(column[0][1], height)
-    );
-    context.bezierCurveTo(
-      convertXToCanvasX(column[1][0], width),
-      convertYToCanvasY(column[1][1], height),
-      convertXToCanvasX(column[2][0], width),
-      convertYToCanvasY(column[2][1], height),
-      convertXToCanvasX(column[3][0], width),
-      convertYToCanvasY(column[3][1], height)
-    );
-    context.stroke();
-  }
-
-  for (const row of rows) {
-    context.strokeStyle = '#5a5a5a';
-    for (const point of row) {
-      context.beginPath();
-      context.arc(
-        convertXToCanvasX(point[0], width),
-        convertYToCanvasY(point[1], height),
-        CONTROL_POINT_RADIUS,
-        0,
-        2 * Math.PI
-      );
-      context.stroke();
-      context.fill();
-    }
-
-    context.strokeStyle = 'white';
-    context.moveTo(
-      convertXToCanvasX(row[0][0], width),
-      convertYToCanvasY(row[0][1], height)
-    );
-    context.bezierCurveTo(
-      convertXToCanvasX(row[1][0], width),
-      convertYToCanvasY(row[1][1], height),
-      convertXToCanvasX(row[2][0], width),
-      convertYToCanvasY(row[2][1], height),
-      convertXToCanvasX(row[3][0], width),
-      convertYToCanvasY(row[3][1], height)
-    );
-    context.stroke();
-  }
-}
+import { renderControlPoints } from './meshGradient/controlPoints';
+import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
+import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
+import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
+import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
 
 function getCoonsPatchFromRowsAndColumns(
   columns: CubicBezier[],
@@ -186,6 +108,7 @@ function App() {
   >('ffd');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(5);
+  const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('2d');
 
   const [activeColorIndex, setActiveColorIndex] = useState<number | null>(null);
 
@@ -229,42 +152,59 @@ function App() {
   );
 
   useEffect(() => {
-    const canvas = canvasRef.current!;
-    const context = canvas.getContext('2d')!;
-
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const patches = getCoonsPatchFromRowsAndColumns(
-      columns,
-      rows,
-      convertedColors
-    );
-
-    for (const patch of patches) {
-      const coonsPatch = coordinatesToPixels(patch);
-      if (patchType === 'tensor') {
-        const tensorPatch = coonsToTensorPatch(coonsPatch);
-        if (rasterizerAlgorithm === 'ffd') {
-          renderTensorPatchWithFFD(tensorPatch, colorModel, context);
-        } else {
-          renderTensorPatchWithSubdivision(
-            tensorPatch,
-            colorModel,
-            subdivisionCount,
-            context
-          );
-        }
+    const context = (() => {
+      const canvas = canvasRef.current!;
+      if (renderContext === 'webgl') {
+        const context = canvas.getContext('webgl')!;
+        context.clearColor(0.0, 0.0, 0.0, 1.0);
+        context.clearDepth(1);
+        context.enable(context.DEPTH_TEST);
+        context.depthFunc(context.LEQUAL);
+        context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
+        return context;
+      } else if (renderContext === '2d') {
+        const context = canvas.getContext('2d')!;
+        context.fillStyle = 'black';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        return context;
       } else {
-        if (rasterizerAlgorithm === 'ffd') {
-          renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
+        throw Error('Unknown render context option selected.');
+      }
+    })();
+
+    if (context instanceof CanvasRenderingContext2D) {
+      // TODO: Implement WebGL versions of these
+      const patches = getCoonsPatchFromRowsAndColumns(
+        columns,
+        rows,
+        convertedColors
+      );
+
+      for (const patch of patches) {
+        const coonsPatch = coordinatesToPixels(patch);
+        if (patchType === 'tensor') {
+          const tensorPatch = coonsToTensorPatch(coonsPatch);
+          if (rasterizerAlgorithm === 'ffd') {
+            renderTensorPatchWithFFD(tensorPatch, colorModel, context);
+          } else {
+            renderTensorPatchWithSubdivision(
+              tensorPatch,
+              colorModel,
+              subdivisionCount,
+              context
+            );
+          }
         } else {
-          renderCoonsPatchWithSubdivision(
-            coonsPatch,
-            colorModel,
-            subdivisionCount,
-            context
-          );
+          if (rasterizerAlgorithm === 'ffd') {
+            renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
+          } else {
+            renderCoonsPatchWithSubdivision(
+              coonsPatch,
+              colorModel,
+              subdivisionCount,
+              context
+            );
+          }
         }
       }
     }
@@ -279,6 +219,7 @@ function App() {
     coordinatesToPixels,
     subdivisionCount,
     convertedColors,
+    renderContext,
   ]);
 
   useEffect(() => {
@@ -576,6 +517,33 @@ function App() {
               LCH
             </label>
           </fieldset>
+
+          <fieldset>
+            <legend>Select render context</legend>
+            <label>
+              <input
+                type="radio"
+                value="2d"
+                id="2d"
+                name="renderContext"
+                checked={renderContext === '2d'}
+                onChange={() => setRenderContext('2d')}
+              />{' '}
+              2D Canvas
+            </label>
+            <label>
+              <input
+                type="radio"
+                value="webgl"
+                id="webgl"
+                name="renderContext"
+                disabled={!window.WebGLRenderingContext}
+                checked={renderContext === 'webgl'}
+                onChange={() => setRenderContext('webgl')}
+              />{' '}
+              WebGL
+            </label>
+          </fieldset>
         </form>
 
         <div style={{ width: 800, height: 600, position: 'relative' }}>
@@ -614,12 +582,22 @@ function App() {
             }}
             ref={colorPickerRef}
           />
-          <canvas
-            width={800}
-            height={600}
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-          />
+          {renderContext === '2d' && (
+            <canvas
+              width={800}
+              height={600}
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+            />
+          )}
+          {renderContext === 'webgl' && (
+            <canvas
+              width={800}
+              height={600}
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+            />
+          )}
         </div>
       </div>
     </div>
