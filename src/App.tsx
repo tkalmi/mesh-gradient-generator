@@ -14,11 +14,14 @@ import {
   rgbaToHsla,
   rgbaToLcha,
 } from './meshGradient/colors';
-import { renderControlPoints } from './meshGradient/controlPoints';
-import { renderTensorPatchWithFFD } from './meshGradient/tensorPatchFFD';
+import {
+  renderTensorPatchWithFFD2d,
+  renderTensorPatchWithFFDWebGL,
+} from './meshGradient/tensorPatchFFD';
 import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
 import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
 import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
+import { renderControlPoints } from './meshGradient/controlPoints';
 
 function getCoonsPatchFromRowsAndColumns(
   columns: CubicBezier[],
@@ -108,7 +111,7 @@ function App() {
   >('ffd');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(5);
-  const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('2d');
+  const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('webgl');
 
   const [activeColorIndex, setActiveColorIndex] = useState<number | null>(null);
 
@@ -160,6 +163,7 @@ function App() {
         context.clearDepth(1);
         context.enable(context.DEPTH_TEST);
         context.depthFunc(context.LEQUAL);
+        context.viewport(0, 0, context.canvas.width, context.canvas.height);
         context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
         return context;
       } else if (renderContext === '2d') {
@@ -173,7 +177,6 @@ function App() {
     })();
 
     if (context instanceof CanvasRenderingContext2D) {
-      // TODO: Implement WebGL versions of these
       const patches = getCoonsPatchFromRowsAndColumns(
         columns,
         rows,
@@ -185,7 +188,7 @@ function App() {
         if (patchType === 'tensor') {
           const tensorPatch = coonsToTensorPatch(coonsPatch);
           if (rasterizerAlgorithm === 'ffd') {
-            renderTensorPatchWithFFD(tensorPatch, colorModel, context);
+            renderTensorPatchWithFFD2d(tensorPatch, colorModel, context);
           } else {
             renderTensorPatchWithSubdivision(
               tensorPatch,
@@ -204,6 +207,39 @@ function App() {
               subdivisionCount,
               context
             );
+          }
+        }
+      }
+    } else if (context instanceof WebGLRenderingContext) {
+      const patches = getCoonsPatchFromRowsAndColumns(
+        columns,
+        rows,
+        convertedColors
+      );
+      for (const patch of patches) {
+        const coonsPatch = coordinatesToPixels(patch);
+        if (patchType === 'tensor') {
+          const tensorPatch = coonsToTensorPatch(coonsPatch);
+          if (rasterizerAlgorithm === 'ffd') {
+            renderTensorPatchWithFFDWebGL(tensorPatch, colorModel, context);
+          } else {
+            // renderTensorPatchWithSubdivision(
+            //   tensorPatch,
+            //   colorModel,
+            //   subdivisionCount,
+            //   context
+            // );
+          }
+        } else {
+          if (rasterizerAlgorithm === 'ffd') {
+            // renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
+          } else {
+            // renderCoonsPatchWithSubdivision(
+            //   coonsPatch,
+            //   colorModel,
+            //   subdivisionCount,
+            //   context
+            // );
           }
         }
       }

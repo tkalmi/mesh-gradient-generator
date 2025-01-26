@@ -82,14 +82,16 @@ export function fixIter<T>(
   func: (x: T) => T,
   initialValue: T
 ): T {
-  function go(remaining: number, value: T): T {
+  const queue: [number, T][] = [[iterCount, initialValue]];
+  while (queue.length > 0) {
+    const [remaining, value] = queue.pop()!;
     if (remaining === 0) {
       return value;
     }
-    return go(remaining - 1, func(value));
+    queue.push([remaining - 1, func(value)]);
   }
 
-  return go(iterCount, initialValue);
+  return initialValue;
 }
 
 export function bezierToFDCoeff(
@@ -175,10 +177,6 @@ export function renderCubicBezier(
   let v = vStart;
 
   for (let currentStep = 0; currentStep < maxStepCount; currentStep++) {
-    if (currentStep >= maxStepCount) {
-      return;
-    }
-
     const i = (Math.floor(x) + Math.floor(y) * imageWidth) * 4;
     const color = bilinearPixelInterpolation(source, uStart, v);
     pixelArray[i + 0] = color[0];

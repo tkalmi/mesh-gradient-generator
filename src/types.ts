@@ -36,3 +36,9 @@ export type ForwardDifferenceCoefficient = {
   fdB: number;
   fdC: number;
 };
+
+export type WebGLProgramInfo<AttributeLocations, UniformLocations> = {
+  program: WebGLShader;
+  attribLocations: AttributeLocations;
+  uniformLocations: UniformLocations;
+};
