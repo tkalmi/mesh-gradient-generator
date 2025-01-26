@@ -120,20 +120,19 @@ export function renderTensorPatchWithSubdivision(
     context.fill(patchPath);
   }
 
-  // Recursive function to handle patch subdivision and rendering
-  function go(depth: number, patch: TensorPatch<Vec2>) {
+  const queue: [number, TensorPatch<Vec2>][] = [[maxDepth, basePatch]];
+  while (queue.length > 0) {
+    const [depth, patch] = queue.pop()!;
     if (depth === 0) {
       drawPatchUniform(patch);
     } else {
       const { northWest, northEast, southWest, southEast } =
         subdivideTensorPatch(patch);
 
-      go(depth - 1, northWest);
-      go(depth - 1, northEast);
-      go(depth - 1, southWest);
-      go(depth - 1, southEast);
+      queue.push([depth - 1, southEast]);
+      queue.push([depth - 1, southWest]);
+      queue.push([depth - 1, northEast]);
+      queue.push([depth - 1, northWest]);
     }
   }
-
-  go(maxDepth, basePatch);
 }
