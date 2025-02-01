@@ -154,6 +154,7 @@ export function renderCubicBezier(
   uEnd: number,
   vEnd: number,
   pixelArray: Uint8ClampedArray | number[],
+  indicesInitialized: Set<number>,
   imageWidth: number
 ) {
   const baseFfd = bezierToFDCoeff(curve);
@@ -178,11 +179,14 @@ export function renderCubicBezier(
 
   for (let currentStep = 0; currentStep < maxStepCount; currentStep++) {
     const i = (Math.floor(x) + Math.floor(y) * imageWidth) * 4;
-    const color = bilinearPixelInterpolation(source, uStart, v);
-    pixelArray[i + 0] = color[0];
-    pixelArray[i + 1] = color[1];
-    pixelArray[i + 2] = color[2];
-    pixelArray[i + 3] = color[3];
+    if (!indicesInitialized.has(i)) {
+      indicesInitialized.add(i);
+      const color = bilinearPixelInterpolation(source, uStart, v);
+      pixelArray[i + 0] = color[0];
+      pixelArray[i + 1] = color[1];
+      pixelArray[i + 2] = color[2];
+      pixelArray[i + 3] = color[3];
+    }
 
     ax += bx;
     bx += xCoeff.fdC;

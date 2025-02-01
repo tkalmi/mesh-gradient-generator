@@ -60,6 +60,8 @@ export function renderCoonsPatchWithFFD(
   let coeffs = ffCoeff;
   let ut = 0;
 
+  const indicesInitialized = new Set<number>();
+
   if (colorModel === 'rgba') {
     // If in RGBA mode, use ImageData, as that's the most efficient way
 
@@ -80,6 +82,7 @@ export function renderCoonsPatchWithFFD(
         ut,
         1,
         imageData.data,
+        indicesInitialized,
         imageWidth
       );
 
@@ -110,6 +113,7 @@ export function renderCoonsPatchWithFFD(
         ut,
         1,
         pixels,
+        indicesInitialized,
         imageWidth
       );
 

@@ -46,6 +46,8 @@ export function renderTensorPatchWithFFD2d(
   let coeffs = ffCoeff;
   let ut = 0;
 
+  const indicesInitialized = new Set<number>();
+
   if (colorModel === 'rgba') {
     // If in RGBA mode, use ImageData, as that's the most efficient way
 
@@ -66,6 +68,7 @@ export function renderTensorPatchWithFFD2d(
         ut,
         1,
         imageData.data,
+        indicesInitialized,
         imageWidth
       );
 
@@ -96,6 +99,7 @@ export function renderTensorPatchWithFFD2d(
         ut,
         1,
         pixels,
+        indicesInitialized,
         imageWidth
       );
 
@@ -120,6 +124,43 @@ type ProgramInfo = WebGLProgramInfo<
   { a_position: number; a_texcoord: number },
   { u_texture: WebGLUniformLocation }
 >;
+
+const vsSource = /*glsl*/ `
+    attribute vec2 a_position;
+    attribute vec2 a_texcoord;
+
+    varying vec2 v_texcoord;
+
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
+
+      v_texcoord = a_texcoord;
+
+    }
+  `;
+
+const fsSource = /*glsl*/ `
+    precision mediump float;
+
+    uniform sampler2D u_texture;
+
+    varying vec2 v_texcoord;
+
+    void main() {
+      gl_FragColor = texture2D(u_texture, v_texcoord);
+    }
+  `;
+
+let globalShaderProgram: WebGLProgram;
+let globalWebGLRenderingContext: WebGLRenderingContext | null = null;
+// TODO: Make this into a proper singleton
+function getShaderProgram(gl: WebGLRenderingContext) {
+  if (!globalShaderProgram || globalWebGLRenderingContext !== gl) {
+    globalWebGLRenderingContext = gl;
+    globalShaderProgram = initShaderProgram(gl, vsSource, fsSource);
+  }
+  return globalShaderProgram;
+}
 
 export function renderTensorPatchWithFFDWebGL(
   patch: TensorPatch<Color>,
@@ -147,6 +188,7 @@ export function renderTensorPatchWithFFDWebGL(
   let ut = 0;
 
   const textureData: number[] = new Array(imageWidth * imageHeight * 4).fill(0);
+  const indicesInitialized = new Set<number>();
 
   for (let i = maxStepCount; i > 0; i--) {
     if (i === 0) {
@@ -163,6 +205,7 @@ export function renderTensorPatchWithFFDWebGL(
       ut,
       1,
       textureData,
+      indicesInitialized,
       imageWidth
     );
 
@@ -171,33 +214,7 @@ export function renderTensorPatchWithFFDWebGL(
     ut += du;
   }
 
-  const vsSource = /*glsl*/ `
-    attribute vec2 a_position;
-    attribute vec2 a_texcoord;
-
-    varying vec2 v_texcoord;
-
-    void main() {
-      gl_Position = vec4(a_position, 0.0, 1.0);
-
-      v_texcoord = a_texcoord;
-
-    }
-  `;
-
-  const fsSource = /*glsl*/ `
-    precision mediump float;
-
-    uniform sampler2D u_texture;
-
-    varying vec2 v_texcoord;
-
-    void main() {
-      gl_FragColor = texture2D(u_texture, v_texcoord);
-    }
-  `;
-
-  const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+  const shaderProgram = getShaderProgram(gl);
 
   const programInfo: ProgramInfo = {
     program: shaderProgram,
