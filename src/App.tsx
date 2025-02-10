@@ -387,7 +387,7 @@ function App() {
   const draggedPointIndexRef = useRef<number | null>(null);
 
   const getHoveredPointIndex = useCallback(
-    (event: React.MouseEvent<HTMLElement>): number | null => {
+    (event: React.MouseEvent<HTMLElement>): number => {
       const { left, top, width, height } = canvasDimensionsRef.current;
       const x = event.clientX - left;
       const y = event.clientY - top;
@@ -403,7 +403,7 @@ function App() {
         );
       });
 
-      return index ?? null;
+      return index;
     },
     [points]
   );
@@ -428,7 +428,7 @@ function App() {
     (event: React.MouseEvent<HTMLDivElement>) => {
       const container = containerRef.current as HTMLDivElement;
       if (draggedPointIndexRef.current === null) {
-        if (getHoveredPointIndex(event) !== null) {
+        if (getHoveredPointIndex(event) >= 0) {
           container.style.cursor = 'grab';
         } else {
           container.style.cursor = 'default';
