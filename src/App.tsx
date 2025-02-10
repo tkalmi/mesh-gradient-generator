@@ -179,8 +179,8 @@ function App() {
   const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('webgl');
   const [showBezierCurves, setShowBezierCurves] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(true);
-  const [rowCount, setRowCount] = useState(1);
-  const [columnCount, setColumnCount] = useState(1);
+  const [rowCount, setRowCount] = useState(3);
+  const [columnCount, setColumnCount] = useState(3);
 
   const { columns, rows } = getColumnsAndRowsFromPoints(
     points,
