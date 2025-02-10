@@ -246,18 +246,21 @@ function getFsSource(colorModel: ColorModel) {
 
     void main() {
       vec4 color = texture2D(u_texture, v_texcoord);
-      color.w = 1.0;
-      ${(() => {
-        switch (colorModel) {
-          case 'hsla':
-            return 'gl_FragColor = hslaToRgba(color);';
-          case 'lcha':
-            return 'gl_FragColor = lchaToRgba(color);';
-          case 'rgba':
-          default:
-            return 'gl_FragColor = color;';
-        }
-      })()}
+      if (color.w <= 0.0) {
+        discard;
+      } else {
+        ${(() => {
+          switch (colorModel) {
+            case 'hsla':
+              return 'gl_FragColor = hslaToRgba(color);';
+            case 'lcha':
+              return 'gl_FragColor = lchaToRgba(color);';
+            case 'rgba':
+            default:
+              return 'gl_FragColor = color;';
+          }
+        })()}
+      }
     }
   `;
 
