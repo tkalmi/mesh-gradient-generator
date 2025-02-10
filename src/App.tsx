@@ -525,271 +525,280 @@ function App() {
 
   return (
     <div
-      className="hover-container"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      ref={containerRef}
+      className="main-container"
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '2rem',
+        minWidth: '100vw',
+        justifyContent: 'center',
+      }}
     >
-      <div className="main-container">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-          }}
-        >
-          <fieldset>
-            <legend>Select patch type</legend>
-            <label>
-              <input
-                type="radio"
-                value="coons"
-                id="coons"
-                name="patchType"
-                checked={patchType === 'coons'}
-                onChange={() => setPatchType('coons')}
-              />{' '}
-              Coons patch
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="tensor"
-                id="tensor"
-                name="patchType"
-                checked={patchType === 'tensor'}
-                onChange={() => setPatchType('tensor')}
-              />{' '}
-              Tensor-product patch
-            </label>
-          </fieldset>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <fieldset>
+          <legend>Select patch type</legend>
+          <label>
+            <input
+              type="radio"
+              value="coons"
+              id="coons"
+              name="patchType"
+              checked={patchType === 'coons'}
+              onChange={() => setPatchType('coons')}
+            />{' '}
+            Coons patch
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="tensor"
+              id="tensor"
+              name="patchType"
+              checked={patchType === 'tensor'}
+              onChange={() => setPatchType('tensor')}
+            />{' '}
+            Tensor-product patch
+          </label>
+        </fieldset>
 
-          <fieldset>
-            <legend>Select rasterizer algorithm</legend>
-            <label>
-              <input
-                type="radio"
-                value="ffd"
-                id="ffd"
-                name="rasterizerAlgorithm"
-                checked={rasterizerAlgorithm === 'ffd'}
-                onChange={() => setRasterizerAlgorithm('ffd')}
-              />{' '}
-              Fast-forward differencing
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="subdivision"
-                id="subdivision"
-                name="rasterizerAlgorithm"
-                checked={rasterizerAlgorithm === 'subdivision'}
-                onChange={() => setRasterizerAlgorithm('subdivision')}
-              />{' '}
-              Patch subdivision
-            </label>
-            <label>
-              <input
-                style={{ marginInline: '0.5em' }}
-                id="subdivision-count"
-                disabled={rasterizerAlgorithm !== 'subdivision'}
-                value={subdivisionCount}
-                onChange={(event) =>
-                  setSubdivisionCount(
-                    clamp(
-                      0,
-                      maxSubdivisions,
-                      Math.round(Number(event.target.value ?? 0))
-                    )
+        <fieldset>
+          <legend>Select rasterizer algorithm</legend>
+          <label>
+            <input
+              type="radio"
+              value="ffd"
+              id="ffd"
+              name="rasterizerAlgorithm"
+              checked={rasterizerAlgorithm === 'ffd'}
+              onChange={() => setRasterizerAlgorithm('ffd')}
+            />{' '}
+            Fast-forward differencing
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="subdivision"
+              id="subdivision"
+              name="rasterizerAlgorithm"
+              checked={rasterizerAlgorithm === 'subdivision'}
+              onChange={() => setRasterizerAlgorithm('subdivision')}
+            />{' '}
+            Patch subdivision
+          </label>
+          <label>
+            <input
+              style={{ marginInline: '0.5em' }}
+              id="subdivision-count"
+              disabled={rasterizerAlgorithm !== 'subdivision'}
+              value={subdivisionCount}
+              onChange={(event) =>
+                setSubdivisionCount(
+                  clamp(
+                    0,
+                    maxSubdivisions,
+                    Math.round(Number(event.target.value ?? 0))
                   )
-                }
-                type="number"
-                min={0}
-                max={maxSubdivisions}
-              />
-              subdivisions
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Select color space</legend>
-            <label>
-              <input
-                type="radio"
-                value="rgba"
-                id="rgba"
-                name="colorModel"
-                checked={colorModel === 'rgba'}
-                onChange={() => setColorModel('rgba')}
-              />{' '}
-              RGB
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="hsla"
-                id="hsla"
-                name="colorModel"
-                checked={colorModel === 'hsla'}
-                onChange={() => setColorModel('hsla')}
-              />{' '}
-              HSL
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="lcha"
-                id="lcha"
-                name="colorModel"
-                checked={colorModel === 'lcha'}
-                onChange={() => setColorModel('lcha')}
-              />{' '}
-              LCH
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Select render context</legend>
-            <label>
-              <input
-                type="radio"
-                value="2d"
-                id="2d"
-                name="renderContext"
-                checked={renderContext === '2d'}
-                onChange={() => setRenderContext('2d')}
-              />{' '}
-              2D Canvas
-            </label>
-            <label>
-              <input
-                type="radio"
-                value="webgl"
-                id="webgl"
-                name="renderContext"
-                disabled={!window.WebGLRenderingContext}
-                checked={renderContext === 'webgl'}
-                onChange={() => setRenderContext('webgl')}
-              />{' '}
-              WebGL
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Helper visibility</legend>
-            <label>
-              <input
-                type="checkbox"
-                id="showBezierCurves"
-                name="showBezierCurves"
-                checked={showBezierCurves}
-                onChange={() => setShowBezierCurves((prev) => !prev)}
-              />{' '}
-              Show Bezier curves
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                id="showControlPoints"
-                name="showBezierCurves"
-                checked={showControlPoints}
-                onChange={() => setShowControlPoints((prev) => !prev)}
-              />{' '}
-              Show control points
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Select patch count</legend>
-            <label>
-              <input
-                style={{ marginInline: '0.5em' }}
-                id="row-count"
-                value={rowCount}
-                onChange={(event) =>
-                  setRowCount(
-                    clamp(1, 4, Math.round(Number(event.target.value ?? 0)))
-                  )
-                }
-                type="number"
-                min={1}
-                max={4}
-              />
-              rows
-            </label>
-            <label>
-              <input
-                style={{ marginInline: '0.5em' }}
-                id="column-count"
-                value={columnCount}
-                onChange={(event) =>
-                  setColumnCount(
-                    clamp(1, 4, Math.round(Number(event.target.value ?? 0)))
-                  )
-                }
-                type="number"
-                min={1}
-                max={4}
-              />
-              columns
-            </label>
-          </fieldset>
-
-          <button
-            type="button"
-            onClick={() => setColors(getColors(rowCount, columnCount))}
-          >
-            Randomize colors
-          </button>
-        </form>
-
-        <div style={{ width: 800, height: 600, position: 'relative' }}>
-          <input
-            style={{
-              opacity: 0,
-              visibility: 'hidden',
-              width: 0,
-              height: 0,
-              position: 'absolute',
-              top: convertYToCanvasY(
-                points[activeColorIndex?.[1] ?? 0][1],
-                canvasRef.current?.height ?? 0
-              ),
-              left: convertXToCanvasX(
-                points[activeColorIndex?.[1] ?? 0][0],
-                canvasRef.current?.width ?? 0
-              ),
-              pointerEvents: activeColorIndex == null ? 'none' : 'auto',
-            }}
-            type="color"
-            id="color-picker"
-            value={rgbaToHex(colors[activeColorIndex?.[0] ?? 0])}
-            autoFocus
-            onChange={(event: React.FormEvent<HTMLInputElement>) => {
-              const value = event.currentTarget.value;
-              setColors((prevColors) =>
-                prevColors.map((color, ind) =>
-                  ind === activeColorIndex?.[0] ? hexToRgb(value) : color
                 )
-              );
-            }}
-            ref={colorPickerRef}
+              }
+              type="number"
+              min={0}
+              max={maxSubdivisions}
+            />
+            subdivisions
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Select color space</legend>
+          <label>
+            <input
+              type="radio"
+              value="rgba"
+              id="rgba"
+              name="colorModel"
+              checked={colorModel === 'rgba'}
+              onChange={() => setColorModel('rgba')}
+            />{' '}
+            RGB
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="hsla"
+              id="hsla"
+              name="colorModel"
+              checked={colorModel === 'hsla'}
+              onChange={() => setColorModel('hsla')}
+            />{' '}
+            HSL
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="lcha"
+              id="lcha"
+              name="colorModel"
+              checked={colorModel === 'lcha'}
+              onChange={() => setColorModel('lcha')}
+            />{' '}
+            LCH
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Select render context</legend>
+          <label>
+            <input
+              type="radio"
+              value="2d"
+              id="2d"
+              name="renderContext"
+              checked={renderContext === '2d'}
+              onChange={() => setRenderContext('2d')}
+            />{' '}
+            2D Canvas
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="webgl"
+              id="webgl"
+              name="renderContext"
+              disabled={!window.WebGLRenderingContext}
+              checked={renderContext === 'webgl'}
+              onChange={() => setRenderContext('webgl')}
+            />{' '}
+            WebGL
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Helper visibility</legend>
+          <label>
+            <input
+              type="checkbox"
+              id="showBezierCurves"
+              name="showBezierCurves"
+              checked={showBezierCurves}
+              onChange={() => setShowBezierCurves((prev) => !prev)}
+            />{' '}
+            Show Bezier curves
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              id="showControlPoints"
+              name="showBezierCurves"
+              checked={showControlPoints}
+              onChange={() => setShowControlPoints((prev) => !prev)}
+            />{' '}
+            Show control points
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Select patch count</legend>
+          <label>
+            <input
+              style={{ marginInline: '0.5em' }}
+              id="row-count"
+              value={rowCount}
+              onChange={(event) =>
+                setRowCount(
+                  clamp(1, 4, Math.round(Number(event.target.value ?? 0)))
+                )
+              }
+              type="number"
+              min={1}
+              max={4}
+            />
+            rows
+          </label>
+          <label>
+            <input
+              style={{ marginInline: '0.5em' }}
+              id="column-count"
+              value={columnCount}
+              onChange={(event) =>
+                setColumnCount(
+                  clamp(1, 4, Math.round(Number(event.target.value ?? 0)))
+                )
+              }
+              type="number"
+              min={1}
+              max={4}
+            />
+            columns
+          </label>
+        </fieldset>
+
+        <button
+          type="button"
+          style={{ marginTop: '1rem' }}
+          onClick={() => setColors(getColors(rowCount, columnCount))}
+        >
+          Randomize colors
+        </button>
+      </form>
+
+      <div
+        style={{ width: 800, height: 600, position: 'relative' }}
+        className="hover-container"
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        ref={containerRef}
+      >
+        <input
+          style={{
+            opacity: 0,
+            visibility: 'hidden',
+            width: 0,
+            height: 0,
+            position: 'absolute',
+            top: convertYToCanvasY(
+              points[activeColorIndex?.[1] ?? 0][1],
+              canvasRef.current?.height ?? 0
+            ),
+            left: convertXToCanvasX(
+              points[activeColorIndex?.[1] ?? 0][0],
+              canvasRef.current?.width ?? 0
+            ),
+            pointerEvents: activeColorIndex == null ? 'none' : 'auto',
+          }}
+          type="color"
+          id="color-picker"
+          value={rgbaToHex(colors[activeColorIndex?.[0] ?? 0])}
+          autoFocus
+          onChange={(event: React.FormEvent<HTMLInputElement>) => {
+            const value = event.currentTarget.value;
+            setColors((prevColors) =>
+              prevColors.map((color, ind) =>
+                ind === activeColorIndex?.[0] ? hexToRgb(value) : color
+              )
+            );
+          }}
+          ref={colorPickerRef}
+        />
+        {renderContext === '2d' && (
+          <canvas
+            width={800}
+            height={600}
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
           />
-          {renderContext === '2d' && (
-            <canvas
-              width={800}
-              height={600}
-              ref={canvasRef}
-              onMouseDown={handleMouseDown}
-            />
-          )}
-          {renderContext === 'webgl' && (
-            <canvas
-              width={800}
-              height={600}
-              ref={canvasRef}
-              onMouseDown={handleMouseDown}
-            />
-          )}
-        </div>
+        )}
+        {renderContext === 'webgl' && (
+          <canvas
+            width={800}
+            height={600}
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+          />
+        )}
       </div>
     </div>
   );
