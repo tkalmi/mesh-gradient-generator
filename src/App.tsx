@@ -177,6 +177,8 @@ function App() {
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(5);
   const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('webgl');
+  const [showBezierCurves, setShowBezierCurves] = useState(false);
+  const [showControlPoints, setShowControlPoints] = useState(true);
   const [rowCount, setRowCount] = useState(1);
   const [columnCount, setColumnCount] = useState(1);
 
@@ -345,7 +347,13 @@ function App() {
       }
     }
 
-    renderControlPoints(context, columns, rows);
+    renderControlPoints(
+      context,
+      columns,
+      rows,
+      showControlPoints,
+      showBezierCurves
+    );
   }, [
     columns,
     rows,
@@ -358,6 +366,8 @@ function App() {
     subdivisionCount,
     convertedColors,
     renderContext,
+    showControlPoints,
+    showBezierCurves,
   ]);
 
   useEffect(() => {
@@ -664,6 +674,30 @@ function App() {
                 onChange={() => setRenderContext('webgl')}
               />{' '}
               WebGL
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Helper visibility</legend>
+            <label>
+              <input
+                type="checkbox"
+                id="showBezierCurves"
+                name="showBezierCurves"
+                checked={showBezierCurves}
+                onChange={() => setShowBezierCurves((prev) => !prev)}
+              />{' '}
+              Show Bezier curves
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                id="showControlPoints"
+                name="showBezierCurves"
+                checked={showControlPoints}
+                onChange={() => setShowControlPoints((prev) => !prev)}
+              />{' '}
+              Show control points
             </label>
           </fieldset>
 

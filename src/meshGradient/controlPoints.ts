@@ -6,7 +6,9 @@ import { initShaderProgram } from './webGL';
 export function renderControlPoints2d(
   context: CanvasRenderingContext2D,
   columns: CubicBezier[],
-  rows: CubicBezier[]
+  rows: CubicBezier[],
+  showControlPoints: boolean,
+  showBezierCurves: boolean
 ) {
   const width = context.canvas.width;
   const height = context.canvas.height;
@@ -17,63 +19,71 @@ export function renderControlPoints2d(
   for (const column of columns) {
     context.strokeStyle = '#5a5a5a';
     for (const point of column) {
-      context.beginPath();
-      context.arc(
-        convertXToCanvasX(point[0], width),
-        convertYToCanvasY(point[1], height),
-        CONTROL_POINT_RADIUS,
-        0,
-        2 * Math.PI
-      );
-      context.stroke();
-      context.fill();
+      if (showControlPoints) {
+        context.beginPath();
+        context.arc(
+          convertXToCanvasX(point[0], width),
+          convertYToCanvasY(point[1], height),
+          CONTROL_POINT_RADIUS,
+          0,
+          2 * Math.PI
+        );
+        context.stroke();
+        context.fill();
+      }
     }
 
-    context.strokeStyle = 'white';
-    context.moveTo(
-      convertXToCanvasX(column[0][0], width),
-      convertYToCanvasY(column[0][1], height)
-    );
-    context.bezierCurveTo(
-      convertXToCanvasX(column[1][0], width),
-      convertYToCanvasY(column[1][1], height),
-      convertXToCanvasX(column[2][0], width),
-      convertYToCanvasY(column[2][1], height),
-      convertXToCanvasX(column[3][0], width),
-      convertYToCanvasY(column[3][1], height)
-    );
-    context.stroke();
+    if (showBezierCurves) {
+      context.strokeStyle = 'white';
+      context.moveTo(
+        convertXToCanvasX(column[0][0], width),
+        convertYToCanvasY(column[0][1], height)
+      );
+      context.bezierCurveTo(
+        convertXToCanvasX(column[1][0], width),
+        convertYToCanvasY(column[1][1], height),
+        convertXToCanvasX(column[2][0], width),
+        convertYToCanvasY(column[2][1], height),
+        convertXToCanvasX(column[3][0], width),
+        convertYToCanvasY(column[3][1], height)
+      );
+      context.stroke();
+    }
   }
 
   for (const row of rows) {
     context.strokeStyle = '#5a5a5a';
     for (const point of row) {
-      context.beginPath();
-      context.arc(
-        convertXToCanvasX(point[0], width),
-        convertYToCanvasY(point[1], height),
-        CONTROL_POINT_RADIUS,
-        0,
-        2 * Math.PI
-      );
-      context.stroke();
-      context.fill();
+      if (showControlPoints) {
+        context.beginPath();
+        context.arc(
+          convertXToCanvasX(point[0], width),
+          convertYToCanvasY(point[1], height),
+          CONTROL_POINT_RADIUS,
+          0,
+          2 * Math.PI
+        );
+        context.stroke();
+        context.fill();
+      }
     }
 
-    context.strokeStyle = 'white';
-    context.moveTo(
-      convertXToCanvasX(row[0][0], width),
-      convertYToCanvasY(row[0][1], height)
-    );
-    context.bezierCurveTo(
-      convertXToCanvasX(row[1][0], width),
-      convertYToCanvasY(row[1][1], height),
-      convertXToCanvasX(row[2][0], width),
-      convertYToCanvasY(row[2][1], height),
-      convertXToCanvasX(row[3][0], width),
-      convertYToCanvasY(row[3][1], height)
-    );
-    context.stroke();
+    if (showBezierCurves) {
+      context.strokeStyle = 'white';
+      context.moveTo(
+        convertXToCanvasX(row[0][0], width),
+        convertYToCanvasY(row[0][1], height)
+      );
+      context.bezierCurveTo(
+        convertXToCanvasX(row[1][0], width),
+        convertYToCanvasY(row[1][1], height),
+        convertXToCanvasX(row[2][0], width),
+        convertYToCanvasY(row[2][1], height),
+        convertXToCanvasX(row[3][0], width),
+        convertYToCanvasY(row[3][1], height)
+      );
+      context.stroke();
+    }
   }
 }
 
@@ -238,12 +248,26 @@ export function renderControlPointsWebGL(
 export function renderControlPoints(
   context: CanvasRenderingContext2D | WebGLRenderingContext,
   columns: CubicBezier[],
-  rows: CubicBezier[]
+  rows: CubicBezier[],
+  showControlPoints: boolean,
+  showBezierCurves: boolean
 ) {
   if (context instanceof WebGLRenderingContext) {
-    renderControlPointsWebGL(context, columns, rows);
+    renderControlPointsWebGL(
+      context,
+      columns,
+      rows,
+      showControlPoints,
+      showBezierCurves
+    );
   } else if (context instanceof CanvasRenderingContext2D) {
-    renderControlPoints2d(context, columns, rows);
+    renderControlPoints2d(
+      context,
+      columns,
+      rows,
+      showControlPoints,
+      showBezierCurves
+    );
   } else {
     throw Error('Unknown render context mode selected.');
   }
