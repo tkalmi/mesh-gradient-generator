@@ -162,14 +162,6 @@ function App() {
 
   const [points, setPoints] = useState<Vec2[]>(getNewPoints(1, 1));
 
-  // In RGBA, two for each row
-  const [rawColors, setColors] = useState<Color[]>([
-    [255, 0, 0, 255],
-    [0, 255, 0, 255],
-    [255, 0, 255, 255],
-    [0, 0, 255, 255],
-  ]);
-
   const [patchType, setPatchType] = useState<'coons' | 'tensor'>('tensor');
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
@@ -181,6 +173,10 @@ function App() {
   const [showControlPoints, setShowControlPoints] = useState(true);
   const [rowCount, setRowCount] = useState(3);
   const [columnCount, setColumnCount] = useState(3);
+  // In RGBA, two for each row
+  const [rawColors, setColors] = useState<Color[]>(
+    getColors(rowCount, columnCount)
+  );
 
   const { columns, rows } = getColumnsAndRowsFromPoints(
     points,
@@ -736,6 +732,13 @@ function App() {
               columns
             </label>
           </fieldset>
+
+          <button
+            type="button"
+            onClick={() => setColors(getColors(rowCount, columnCount))}
+          >
+            Randomize colors
+          </button>
         </form>
 
         <div style={{ width: 800, height: 600, position: 'relative' }}>
