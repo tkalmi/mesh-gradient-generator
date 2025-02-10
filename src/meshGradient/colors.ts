@@ -59,7 +59,10 @@ export const colorToStringFuncs: Record<ColorModel, (color: Color) => string> =
   } as const;
 
 export function rgbaToHex(rgba: Color): string {
-  return `#${rgba.map((byte) => byte.toString(16).padStart(0)).join('')}`;
+  return `#${rgba
+    .slice(0, 3)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')}`;
 }
 
 export function hexToRgb(hex: string): Color {
