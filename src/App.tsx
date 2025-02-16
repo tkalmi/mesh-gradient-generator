@@ -18,7 +18,10 @@ import {
   renderTensorPatchWithFFD2d,
   renderTensorPatchWithFFDWebGL,
 } from './meshGradient/tensorPatchFFD';
-import { renderTensorPatchWithSubdivision } from './meshGradient/tensorPatchSubdivision';
+import {
+  renderTensorPatchWithSubdivision2d,
+  renderTensorPatchWithSubdivisionWebGL,
+} from './meshGradient/tensorPatchSubdivision';
 import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
 import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
 import { renderControlPoints } from './meshGradient/controlPoints';
@@ -165,14 +168,14 @@ function App() {
   const [patchType, setPatchType] = useState<'coons' | 'tensor'>('tensor');
   const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
     'ffd' | 'subdivision'
-  >('ffd');
+  >('subdivision');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
-  const [subdivisionCount, setSubdivisionCount] = useState(5);
+  const [subdivisionCount, setSubdivisionCount] = useState(0);
   const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('webgl');
   const [showBezierCurves, setShowBezierCurves] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(true);
-  const [rowCount, setRowCount] = useState(3);
-  const [columnCount, setColumnCount] = useState(3);
+  const [rowCount, setRowCount] = useState(1);
+  const [columnCount, setColumnCount] = useState(1);
   // In RGBA, two for each row
   const [rawColors, setColors] = useState<Color[]>(
     getColors(rowCount, columnCount)
@@ -286,7 +289,7 @@ function App() {
           if (rasterizerAlgorithm === 'ffd') {
             renderTensorPatchWithFFD2d(tensorPatch, colorModel, context);
           } else {
-            renderTensorPatchWithSubdivision(
+            renderTensorPatchWithSubdivision2d(
               tensorPatch,
               colorModel,
               subdivisionCount,
@@ -321,12 +324,12 @@ function App() {
           if (rasterizerAlgorithm === 'ffd') {
             renderTensorPatchWithFFDWebGL(tensorPatch, colorModel, context);
           } else {
-            // renderTensorPatchWithSubdivision(
-            //   tensorPatch,
-            //   colorModel,
-            //   subdivisionCount,
-            //   context
-            // );
+            renderTensorPatchWithSubdivisionWebGL(
+              tensorPatch,
+              colorModel,
+              subdivisionCount,
+              context
+            );
           }
         } else {
           if (rasterizerAlgorithm === 'ffd') {
