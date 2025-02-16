@@ -103,11 +103,7 @@ export function renderTensorPatchWithSubdivision2d(
     const { curve0, curve3, tensorValues } = patch;
     const [u, v] = meanValue(Object.values(tensorValues)); // Get mean UV from coonsValues
 
-    console.log('UV', Object.values(tensorValues).flat());
-    console.log('REAL UV', [u, v]);
-
     const baseColors = tensorPatch.tensorValues;
-    console.log('BASE COLORS', baseColors);
     const color = bilinearPixelInterpolation(baseColors, u, v); // Interpolate texture color at UV coordinates
 
     // Draw the patch
@@ -257,66 +253,72 @@ export function renderTensorPatchWithSubdivisionWebGL(
     },
   };
 
-  const vertices: number[] = [];
-  const corners1: number[] = [];
-  const corners2: number[] = [];
-  const uv1: number[] = [];
-  const uv2: number[] = [];
+  const vertices = new Float32Array(4 ** maxDepth * 12);
+  const corners1 = new Float32Array(4 ** maxDepth * 6 * 4);
+  const corners2 = new Float32Array(4 ** maxDepth * 6 * 4);
+  const uv1 = new Float32Array(4 ** maxDepth * 6 * 4);
+  const uv2 = new Float32Array(4 ** maxDepth * 6 * 4);
 
+  let addPatchCounter = 0;
   function addPatchToAttributes(patch: TensorPatch<Vec2>) {
     const { curve0, curve3, tensorValues } = patch;
+    const vertexBaseIndex = addPatchCounter * 12;
 
     // Add vertices
     // Triangle 1
-    vertices.push(curve0[0][0]);
-    vertices.push(curve0[0][1]);
+    vertices[vertexBaseIndex + 0] = curve0[0][0];
+    vertices[vertexBaseIndex + 1] = curve0[0][1];
 
-    vertices.push(curve3[0][0]);
-    vertices.push(curve3[0][1]);
+    vertices[vertexBaseIndex + 2] = curve3[0][0];
+    vertices[vertexBaseIndex + 3] = curve3[0][1];
 
-    vertices.push(curve3[3][0]);
-    vertices.push(curve3[3][1]);
+    vertices[vertexBaseIndex + 4] = curve3[3][0];
+    vertices[vertexBaseIndex + 5] = curve3[3][1];
     // Triangle 2
-    vertices.push(curve3[3][0]);
-    vertices.push(curve3[3][1]);
+    vertices[vertexBaseIndex + 6] = curve3[3][0];
+    vertices[vertexBaseIndex + 7] = curve3[3][1];
 
-    vertices.push(curve0[3][0]);
-    vertices.push(curve0[3][1]);
+    vertices[vertexBaseIndex + 8] = curve0[3][0];
+    vertices[vertexBaseIndex + 9] = curve0[3][1];
 
-    vertices.push(curve0[0][0]);
-    vertices.push(curve0[0][1]);
+    vertices[vertexBaseIndex + 10] = curve0[0][0];
+    vertices[vertexBaseIndex + 11] = curve0[0][1];
 
+    const auxBaseIndex1 = addPatchCounter * 6;
     for (let i = 0; i < 6; i++) {
+      const auxBaseIndex2 = (auxBaseIndex1 + i) << 2;
       // Add UV coordinates for all triangle vertices
-      uv1.push(tensorValues.northValue[0]);
-      uv1.push(tensorValues.northValue[1]);
+      uv1[auxBaseIndex2 + 0] = tensorValues.northValue[0];
+      uv1[auxBaseIndex2 + 1] = tensorValues.northValue[1];
 
-      uv1.push(tensorValues.eastValue[0]);
-      uv1.push(tensorValues.eastValue[1]);
+      uv1[auxBaseIndex2 + 2] = tensorValues.eastValue[0];
+      uv1[auxBaseIndex2 + 3] = tensorValues.eastValue[1];
 
-      uv2.push(tensorValues.southValue[0]);
-      uv2.push(tensorValues.southValue[1]);
+      uv2[auxBaseIndex2 + 0] = tensorValues.southValue[0];
+      uv2[auxBaseIndex2 + 1] = tensorValues.southValue[1];
 
-      uv2.push(tensorValues.westValue[0]);
-      uv2.push(tensorValues.westValue[1]);
+      uv2[auxBaseIndex2 + 2] = tensorValues.westValue[0];
+      uv2[auxBaseIndex2 + 3] = tensorValues.westValue[1];
 
       // Add corners
       // North
-      corners1.push(curve0[0][0]);
-      corners1.push(curve0[0][1]);
+      corners1[auxBaseIndex2 + 0] = curve0[0][0];
+      corners1[auxBaseIndex2 + 1] = curve0[0][1];
 
       // East
-      corners1.push(curve0[1][0]);
-      corners1.push(curve0[1][1]);
+      corners1[auxBaseIndex2 + 2] = curve0[1][0];
+      corners1[auxBaseIndex2 + 3] = curve0[1][1];
 
       // South
-      corners2.push(curve3[1][0]);
-      corners2.push(curve3[1][1]);
+      corners2[auxBaseIndex2 + 0] = curve3[1][0];
+      corners2[auxBaseIndex2 + 1] = curve3[1][1];
 
       // West
-      corners2.push(curve3[0][0]);
-      corners2.push(curve3[0][1]);
+      corners2[auxBaseIndex2 + 2] = curve3[0][0];
+      corners2[auxBaseIndex2 + 3] = curve3[0][1];
     }
+
+    addPatchCounter++;
   }
 
   const queue: [number, TensorPatch<Vec2>][] = [[maxDepth, basePatch]];
@@ -361,23 +363,23 @@ export function renderTensorPatchWithSubdivisionWebGL(
   function initBuffers() {
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
     const uvNorthEastBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, uvNorthEastBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv1), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, uv1, gl.STATIC_DRAW);
 
     const uvSouthWestBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, uvSouthWestBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv2), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, uv2, gl.STATIC_DRAW);
 
     const cornersNorthEastBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cornersNorthEastBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(corners1), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, corners1, gl.STATIC_DRAW);
 
     const cornersSouthWestBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cornersSouthWestBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(corners2), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, corners2, gl.STATIC_DRAW);
 
     return {
       a_position: positionBuffer,
