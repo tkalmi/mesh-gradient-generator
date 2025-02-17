@@ -299,7 +299,17 @@ function getShaderProgram(gl: WebGLRenderingContext, colorModel: ColorModel) {
   }
 }
 
-export function renderTensorPatchWithFFDWebGL(
+export function renderTensorPatchesWithFFDWebGL(
+  patches: TensorPatch<Color>[],
+  colorModel: ColorModel,
+  gl: WebGLRenderingContext
+) {
+  patches.forEach((patch) =>
+    renderTensorPatchWithFFDWebGL(patch, colorModel, gl)
+  );
+}
+
+function renderTensorPatchWithFFDWebGL(
   patch: TensorPatch<Color>,
   colorModel: ColorModel,
   gl: WebGLRenderingContext

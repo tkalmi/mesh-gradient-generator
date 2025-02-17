@@ -146,26 +146,39 @@ type ProgramInfo = WebGLProgramInfo<
     a_uv_south_west: number;
     a_corners_north_east: number;
     a_corners_south_west: number;
+    a_color_north: number;
+    a_color_east: number;
+    a_color_south: number;
+    a_color_west: number;
   },
-  { u_resolution: WebGLUniformLocation; u_colors: WebGLUniformLocation }
+  {
+    u_resolution: WebGLUniformLocation;
+    u_colors: WebGLUniformLocation;
+  }
 >;
 
 const vsSource = /*glsl*/ `
   attribute vec2 a_position;
   attribute vec4 a_uv_north_east;
   attribute vec4 a_uv_south_west;
-  // attribute vec4 a_color;
   attribute vec4 a_corners_north_east;
   attribute vec4 a_corners_south_west;
+  attribute vec4 a_color_north;
+  attribute vec4 a_color_east;
+  attribute vec4 a_color_south;
+  attribute vec4 a_color_west;
   
   uniform vec2 u_resolution;
-  uniform mat4 u_colors;
 
   varying vec4 v_uv_north_east;
   varying vec4 v_uv_south_west;
   varying vec4 v_corners_north_east;
   varying vec4 v_corners_south_west;
   varying vec4 v_position;
+  varying vec4 v_color_north;
+  varying vec4 v_color_east;
+  varying vec4 v_color_south;
+  varying vec4 v_color_west;
 
   void main() {
     vec2 scaledPosition = a_position.xy / u_resolution; // transform to [0, 1] space
@@ -176,8 +189,11 @@ const vsSource = /*glsl*/ `
     v_uv_south_west = a_uv_south_west;
     v_corners_north_east = a_corners_north_east;
     v_corners_south_west = a_corners_south_west;
+    v_color_north = a_color_north;
+    v_color_east = a_color_east;
+    v_color_south = a_color_south;
+    v_color_west = a_color_west;
     v_position = gl_Position;
-
   }
 `;
 
@@ -189,40 +205,27 @@ const fsSource = /*glsl*/ `
   varying vec4 v_corners_north_east;
   varying vec4 v_corners_south_west;
   varying vec4 v_position;
+  varying vec4 v_color_north;
+  varying vec4 v_color_east;
+  varying vec4 v_color_south;
+  varying vec4 v_color_west;
 
-  uniform mat4 u_colors;
 
   vec4 bilinearPixelInterpolation(float u, float v) {
-    vec4 colorNorth = u_colors[0];
-    vec4 colorEast = u_colors[1];
-    vec4 colorSouth = u_colors[2];
-    vec4 colorWest = u_colors[3];
 
-    vec4 colorTop = mix(colorNorth, colorEast, u);
-    vec4 colorBottom = mix(colorWest, colorSouth, u);
+    vec4 colorTop = mix(v_color_north, v_color_east, u);
+    vec4 colorBottom = mix(v_color_west, v_color_south, u);
 
-    return mix(colorTop, colorBottom, v) / 255.0;
+    return mix(colorTop, colorBottom, v) * 0.00392156862745098; // Divide by 255.0
   }
 
   vec4 getColor() {
-    // float distNorth = length(v_position.xy - v_corners_north_east.xy);
-    // float distEast = length(v_position.xy - v_corners_north_east.zw);
-    // float distSouth = length(v_position.xy - v_corners_south_west.xy);
-    // float distWest = length(v_position.xy - v_corners_south_west.zw);
-  
-    // float distNorthSouth = length(v_corners_south_west.xy - v_corners_north_east.xy);
-    // float distEastWest = length(v_corners_south_west.zw - v_corners_north_east.zw);
-
-    // vec4 normalizedDistances = vec4(distNorth, distEast, distSouth, distWest) / max(distNorthSouth, distEastWest) * -1.0 + 1.0;
-
-    // vec2 uvNorth = v_uv_north_east.xy * normalizedDistances.x;
-    // vec2 uvEast = v_uv_north_east.zw * normalizedDistances.y;
-    // vec2 uvSouth = v_uv_south_west.xy * normalizedDistances.x;
-    // vec2 uvWest = v_uv_south_west.zw * normalizedDistances.y;
-
-    // vec2 uv = (uvNorth + uvEast + uvSouth + uvWest) / 4.0;
-
-    vec2 uv = vec2(v_uv_north_east.xy + v_uv_north_east.zw + v_uv_south_west.xy + v_uv_south_west.zw)/ 4.0;
+    vec2 uv = vec2(
+      v_uv_north_east.xy +
+      v_uv_north_east.zw +
+      v_uv_south_west.xy +
+      v_uv_south_west.zw
+    ) * 0.25;
 
     return bilinearPixelInterpolation(uv.x, uv.y);
   }
@@ -237,103 +240,157 @@ function getShaderProgram(gl: WebGLRenderingContext, colorModel: ColorModel) {
   return initShaderProgram(gl, vsSource, fsSource);
 }
 
-export function renderTensorPatchWithSubdivisionWebGL(
-  tensorPatch: TensorPatch<Color>,
+export function renderTensorPatchesWithSubdivisionWebGL(
+  tensorPatches: TensorPatch<Color>[],
   colorModel: ColorModel,
   maxDepth: number,
   gl: WebGLRenderingContext
 ) {
-  const basePatch: TensorPatch<Vec2> = {
-    ...tensorPatch,
-    tensorValues: {
-      northValue: [0, 0],
-      eastValue: [1, 0],
-      southValue: [1, 1],
-      westValue: [0, 1],
-    },
-  };
+  const vertices = new Float32Array(4 ** maxDepth * 12 * tensorPatches.length);
+  const corners1 = new Float32Array(
+    4 ** maxDepth * 6 * 4 * tensorPatches.length
+  );
+  const corners2 = new Float32Array(
+    4 ** maxDepth * 6 * 4 * tensorPatches.length
+  );
+  const uv1 = new Float32Array(4 ** maxDepth * 6 * 4 * tensorPatches.length);
+  const uv2 = new Float32Array(4 ** maxDepth * 6 * 4 * tensorPatches.length);
+  // const texCoords = new Float32Array(4 ** maxDepth * 6 * tensorPatches.length);
+  // let textureData: number[] = [];
 
-  const vertices = new Float32Array(4 ** maxDepth * 12);
-  const corners1 = new Float32Array(4 ** maxDepth * 6 * 4);
-  const corners2 = new Float32Array(4 ** maxDepth * 6 * 4);
-  const uv1 = new Float32Array(4 ** maxDepth * 6 * 4);
-  const uv2 = new Float32Array(4 ** maxDepth * 6 * 4);
+  const colorNorth = new Float32Array(
+    4 ** maxDepth * 6 * 4 * tensorPatches.length
+  );
+  const colorEast = new Float32Array(
+    4 ** maxDepth * 6 * 4 * tensorPatches.length
+  );
+  const colorSouth = new Float32Array(
+    4 ** maxDepth * 6 * 4 * tensorPatches.length
+  );
+  const colorWest = new Float32Array(
+    4 ** maxDepth * 6 * 4 * tensorPatches.length
+  );
 
-  let addPatchCounter = 0;
-  function addPatchToAttributes(patch: TensorPatch<Vec2>) {
-    const { curve0, curve3, tensorValues } = patch;
-    const vertexBaseIndex = addPatchCounter * 12;
+  for (let patchInd = 0; patchInd < tensorPatches.length; patchInd++) {
+    const tensorPatch = tensorPatches[patchInd];
+    // const texCoord = patchInd * 4;
+    // textureData = textureData.concat(
+    //   Object.values(tensorPatch.tensorValues).flat()
+    // );
 
-    // Add vertices
-    // Triangle 1
-    vertices[vertexBaseIndex + 0] = curve0[0][0];
-    vertices[vertexBaseIndex + 1] = curve0[0][1];
+    const basePatch: TensorPatch<Vec2> = {
+      ...tensorPatch,
+      tensorValues: {
+        northValue: [0, 0],
+        eastValue: [1, 0],
+        southValue: [1, 1],
+        westValue: [0, 1],
+      },
+    };
 
-    vertices[vertexBaseIndex + 2] = curve3[0][0];
-    vertices[vertexBaseIndex + 3] = curve3[0][1];
+    const baseVertexOffset = patchInd * 4 ** maxDepth * 12;
+    const baseAuxOffset = 4 ** maxDepth * 6 * 4 * patchInd;
 
-    vertices[vertexBaseIndex + 4] = curve3[3][0];
-    vertices[vertexBaseIndex + 5] = curve3[3][1];
-    // Triangle 2
-    vertices[vertexBaseIndex + 6] = curve3[3][0];
-    vertices[vertexBaseIndex + 7] = curve3[3][1];
+    let addPatchCounter = 0;
+    function addPatchToAttributes(patch: TensorPatch<Vec2>) {
+      const { curve0, curve3, tensorValues } = patch;
+      const vertexBaseIndex = baseVertexOffset + addPatchCounter * 12;
 
-    vertices[vertexBaseIndex + 8] = curve0[3][0];
-    vertices[vertexBaseIndex + 9] = curve0[3][1];
+      // Add vertices
+      // Triangle 1
+      vertices[vertexBaseIndex + 0] = curve0[0][0];
+      vertices[vertexBaseIndex + 1] = curve0[0][1];
 
-    vertices[vertexBaseIndex + 10] = curve0[0][0];
-    vertices[vertexBaseIndex + 11] = curve0[0][1];
+      vertices[vertexBaseIndex + 2] = curve3[0][0];
+      vertices[vertexBaseIndex + 3] = curve3[0][1];
 
-    const auxBaseIndex1 = addPatchCounter * 6;
-    for (let i = 0; i < 6; i++) {
-      const auxBaseIndex2 = (auxBaseIndex1 + i) << 2;
-      // Add UV coordinates for all triangle vertices
-      uv1[auxBaseIndex2 + 0] = tensorValues.northValue[0];
-      uv1[auxBaseIndex2 + 1] = tensorValues.northValue[1];
+      vertices[vertexBaseIndex + 4] = curve3[3][0];
+      vertices[vertexBaseIndex + 5] = curve3[3][1];
+      // Triangle 2
+      vertices[vertexBaseIndex + 6] = curve3[3][0];
+      vertices[vertexBaseIndex + 7] = curve3[3][1];
 
-      uv1[auxBaseIndex2 + 2] = tensorValues.eastValue[0];
-      uv1[auxBaseIndex2 + 3] = tensorValues.eastValue[1];
+      vertices[vertexBaseIndex + 8] = curve0[3][0];
+      vertices[vertexBaseIndex + 9] = curve0[3][1];
 
-      uv2[auxBaseIndex2 + 0] = tensorValues.southValue[0];
-      uv2[auxBaseIndex2 + 1] = tensorValues.southValue[1];
+      vertices[vertexBaseIndex + 10] = curve0[0][0];
+      vertices[vertexBaseIndex + 11] = curve0[0][1];
 
-      uv2[auxBaseIndex2 + 2] = tensorValues.westValue[0];
-      uv2[auxBaseIndex2 + 3] = tensorValues.westValue[1];
+      const auxBaseIndex1 = addPatchCounter * 6;
+      for (let i = 0; i < 6; i++) {
+        const auxBaseIndex2 = baseAuxOffset + ((auxBaseIndex1 + i) << 2);
+        // Add UV coordinates for all triangle vertices
+        uv1[auxBaseIndex2 + 0] = tensorValues.northValue[0];
+        uv1[auxBaseIndex2 + 1] = tensorValues.northValue[1];
 
-      // Add corners
-      // North
-      corners1[auxBaseIndex2 + 0] = curve0[0][0];
-      corners1[auxBaseIndex2 + 1] = curve0[0][1];
+        uv1[auxBaseIndex2 + 2] = tensorValues.eastValue[0];
+        uv1[auxBaseIndex2 + 3] = tensorValues.eastValue[1];
 
-      // East
-      corners1[auxBaseIndex2 + 2] = curve0[1][0];
-      corners1[auxBaseIndex2 + 3] = curve0[1][1];
+        uv2[auxBaseIndex2 + 0] = tensorValues.southValue[0];
+        uv2[auxBaseIndex2 + 1] = tensorValues.southValue[1];
 
-      // South
-      corners2[auxBaseIndex2 + 0] = curve3[1][0];
-      corners2[auxBaseIndex2 + 1] = curve3[1][1];
+        uv2[auxBaseIndex2 + 2] = tensorValues.westValue[0];
+        uv2[auxBaseIndex2 + 3] = tensorValues.westValue[1];
 
-      // West
-      corners2[auxBaseIndex2 + 2] = curve3[0][0];
-      corners2[auxBaseIndex2 + 3] = curve3[0][1];
+        // Add corners
+        // North
+        corners1[auxBaseIndex2 + 0] = curve0[0][0];
+        corners1[auxBaseIndex2 + 1] = curve0[0][1];
+
+        // East
+        corners1[auxBaseIndex2 + 2] = curve0[1][0];
+        corners1[auxBaseIndex2 + 3] = curve0[1][1];
+
+        // South
+        corners2[auxBaseIndex2 + 0] = curve3[1][0];
+        corners2[auxBaseIndex2 + 1] = curve3[1][1];
+
+        // West
+        corners2[auxBaseIndex2 + 2] = curve3[0][0];
+        corners2[auxBaseIndex2 + 3] = curve3[0][1];
+
+        // Add texCoords
+        // texCoords[vertexBaseIndex + i] = texCoord;
+
+        // Add colors
+        colorNorth[auxBaseIndex2 + 0] = tensorPatch.tensorValues.northValue[0];
+        colorNorth[auxBaseIndex2 + 1] = tensorPatch.tensorValues.northValue[1];
+        colorNorth[auxBaseIndex2 + 2] = tensorPatch.tensorValues.northValue[2];
+        colorNorth[auxBaseIndex2 + 3] = tensorPatch.tensorValues.northValue[3];
+
+        colorEast[auxBaseIndex2 + 0] = tensorPatch.tensorValues.eastValue[0];
+        colorEast[auxBaseIndex2 + 1] = tensorPatch.tensorValues.eastValue[1];
+        colorEast[auxBaseIndex2 + 2] = tensorPatch.tensorValues.eastValue[2];
+        colorEast[auxBaseIndex2 + 3] = tensorPatch.tensorValues.eastValue[3];
+
+        colorSouth[auxBaseIndex2 + 0] = tensorPatch.tensorValues.southValue[0];
+        colorSouth[auxBaseIndex2 + 1] = tensorPatch.tensorValues.southValue[1];
+        colorSouth[auxBaseIndex2 + 2] = tensorPatch.tensorValues.southValue[2];
+        colorSouth[auxBaseIndex2 + 3] = tensorPatch.tensorValues.southValue[3];
+
+        colorWest[auxBaseIndex2 + 0] = tensorPatch.tensorValues.westValue[0];
+        colorWest[auxBaseIndex2 + 1] = tensorPatch.tensorValues.westValue[1];
+        colorWest[auxBaseIndex2 + 2] = tensorPatch.tensorValues.westValue[2];
+        colorWest[auxBaseIndex2 + 3] = tensorPatch.tensorValues.westValue[3];
+      }
+
+      addPatchCounter++;
     }
 
-    addPatchCounter++;
-  }
+    const queue: [number, TensorPatch<Vec2>][] = [[maxDepth, basePatch]];
+    while (queue.length > 0) {
+      const [depth, patch] = queue.pop()!;
+      if (depth === 0) {
+        addPatchToAttributes(patch);
+      } else {
+        const { northWest, northEast, southWest, southEast } =
+          subdivideTensorPatch(patch);
 
-  const queue: [number, TensorPatch<Vec2>][] = [[maxDepth, basePatch]];
-  while (queue.length > 0) {
-    const [depth, patch] = queue.pop()!;
-    if (depth === 0) {
-      addPatchToAttributes(patch);
-    } else {
-      const { northWest, northEast, southWest, southEast } =
-        subdivideTensorPatch(patch);
-
-      queue.push([depth - 1, southEast]);
-      queue.push([depth - 1, southWest]);
-      queue.push([depth - 1, northEast]);
-      queue.push([depth - 1, northWest]);
+        queue.push([depth - 1, southEast]);
+        queue.push([depth - 1, southWest]);
+        queue.push([depth - 1, northEast]);
+        queue.push([depth - 1, northWest]);
+      }
     }
   }
 
@@ -353,6 +410,11 @@ export function renderTensorPatchWithSubdivisionWebGL(
         shaderProgram,
         'a_corners_south_west'
       ),
+      // a_texcoord: gl.getAttribLocation(shaderProgram, 'a_texcoord'),
+      a_color_north: gl.getAttribLocation(shaderProgram, 'a_color_north'),
+      a_color_east: gl.getAttribLocation(shaderProgram, 'a_color_east'),
+      a_color_south: gl.getAttribLocation(shaderProgram, 'a_color_south'),
+      a_color_west: gl.getAttribLocation(shaderProgram, 'a_color_west'),
     },
     uniformLocations: {
       u_resolution: gl.getUniformLocation(shaderProgram, 'u_resolution')!,
@@ -381,12 +443,32 @@ export function renderTensorPatchWithSubdivisionWebGL(
     gl.bindBuffer(gl.ARRAY_BUFFER, cornersSouthWestBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, corners2, gl.STATIC_DRAW);
 
+    const colorNorthBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorNorthBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, colorNorth, gl.STATIC_DRAW);
+
+    const colorEastBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorEastBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, colorEast, gl.STATIC_DRAW);
+
+    const colorSouthBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorSouthBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, colorSouth, gl.STATIC_DRAW);
+
+    const colorWestBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorWestBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, colorWest, gl.STATIC_DRAW);
+
     return {
       a_position: positionBuffer,
       a_uv_north_east: uvNorthEastBuffer,
       a_uv_south_west: uvSouthWestBuffer,
       a_corners_north_east: cornersNorthEastBuffer,
       a_corners_south_west: cornersSouthWestBuffer,
+      a_color_north: colorNorthBuffer,
+      a_color_east: colorEastBuffer,
+      a_color_south: colorSouthBuffer,
+      a_color_west: colorWestBuffer,
     };
   }
 
@@ -397,6 +479,10 @@ export function renderTensorPatchWithSubdivisionWebGL(
       a_uv_south_west: WebGLBuffer;
       a_corners_north_east: WebGLBuffer;
       a_corners_south_west: WebGLBuffer;
+      a_color_north: WebGLBuffer;
+      a_color_east: WebGLBuffer;
+      a_color_south: WebGLBuffer;
+      a_color_west: WebGLBuffer;
     },
     programInfo: ProgramInfo
   ) {
@@ -419,6 +505,10 @@ export function renderTensorPatchWithSubdivisionWebGL(
       a_uv_south_west: WebGLBuffer;
       a_corners_north_east: WebGLBuffer;
       a_corners_south_west: WebGLBuffer;
+      a_color_north: WebGLBuffer;
+      a_color_east: WebGLBuffer;
+      a_color_south: WebGLBuffer;
+      a_color_west: WebGLBuffer;
     },
     programInfo: ProgramInfo
   ) {
@@ -452,6 +542,10 @@ export function renderTensorPatchWithSubdivisionWebGL(
       a_uv_south_west: WebGLBuffer;
       a_corners_north_east: WebGLBuffer;
       a_corners_south_west: WebGLBuffer;
+      a_color_north: WebGLBuffer;
+      a_color_east: WebGLBuffer;
+      a_color_south: WebGLBuffer;
+      a_color_west: WebGLBuffer;
     },
     programInfo: ProgramInfo
   ) {
@@ -482,6 +576,65 @@ export function renderTensorPatchWithSubdivisionWebGL(
     );
   }
 
+  function setColorAttribute(
+    buffers: {
+      a_position: WebGLBuffer;
+      a_uv_north_east: WebGLBuffer;
+      a_uv_south_west: WebGLBuffer;
+      a_corners_north_east: WebGLBuffer;
+      a_corners_south_west: WebGLBuffer;
+      a_color_north: WebGLBuffer;
+      a_color_east: WebGLBuffer;
+      a_color_south: WebGLBuffer;
+      a_color_west: WebGLBuffer;
+    },
+    programInfo: ProgramInfo
+  ) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.a_color_north);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.a_color_north,
+      4,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.a_color_north);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.a_color_east);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.a_color_east,
+      4,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.a_color_east);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.a_color_south);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.a_color_south,
+      4,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.a_color_south);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.a_color_west);
+    gl.vertexAttribPointer(
+      programInfo.attribLocations.a_color_west,
+      4,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(programInfo.attribLocations.a_color_west);
+  }
+
   function drawPatch(
     buffers: {
       a_position: WebGLBuffer;
@@ -489,12 +642,18 @@ export function renderTensorPatchWithSubdivisionWebGL(
       a_uv_south_west: WebGLBuffer;
       a_corners_north_east: WebGLBuffer;
       a_corners_south_west: WebGLBuffer;
+      a_color_north: WebGLBuffer;
+      a_color_east: WebGLBuffer;
+      a_color_south: WebGLBuffer;
+      a_color_west: WebGLBuffer;
     },
     programInfo: ProgramInfo
   ) {
     setPositionAttribute(buffers, programInfo);
     setUVAttribute(buffers, programInfo);
     setCornersAttribute(buffers, programInfo);
+    // setTexcoordAttribute(buffers, programInfo);
+    setColorAttribute(buffers, programInfo);
 
     gl.useProgram(programInfo.program);
 
@@ -502,12 +661,6 @@ export function renderTensorPatchWithSubdivisionWebGL(
       programInfo.uniformLocations.u_resolution,
       gl.canvas.width,
       gl.canvas.height
-    );
-
-    gl.uniformMatrix4fv(
-      programInfo.uniformLocations.u_colors,
-      false,
-      new Float32Array(Object.values(tensorPatch.tensorValues).flat())
     );
 
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);

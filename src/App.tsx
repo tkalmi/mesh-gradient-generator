@@ -16,11 +16,11 @@ import {
 } from './meshGradient/colors';
 import {
   renderTensorPatchWithFFD2d,
-  renderTensorPatchWithFFDWebGL,
+  renderTensorPatchesWithFFDWebGL,
 } from './meshGradient/tensorPatchFFD';
 import {
   renderTensorPatchWithSubdivision2d,
-  renderTensorPatchWithSubdivisionWebGL,
+  renderTensorPatchesWithSubdivisionWebGL,
 } from './meshGradient/tensorPatchSubdivision';
 import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
 import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
@@ -170,12 +170,12 @@ function App() {
     'ffd' | 'subdivision'
   >('subdivision');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
-  const [subdivisionCount, setSubdivisionCount] = useState(0);
+  const [subdivisionCount, setSubdivisionCount] = useState(7);
   const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('webgl');
   const [showBezierCurves, setShowBezierCurves] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(true);
-  const [rowCount, setRowCount] = useState(1);
-  const [columnCount, setColumnCount] = useState(1);
+  const [rowCount, setRowCount] = useState(3);
+  const [columnCount, setColumnCount] = useState(3);
   // In RGBA, two for each row
   const [rawColors, setColors] = useState<Color[]>(
     getColors(rowCount, columnCount)
@@ -317,31 +317,31 @@ function App() {
         columnCount,
         rowCount
       );
-      for (const patch of patches) {
-        const coonsPatch = coordinatesToPixels(patch);
+      const coonsPatches = patches.map((patch) => coordinatesToPixels(patch));
+      const tensorPatches = coonsPatches.map((coonsPatch) =>
+        coonsToTensorPatch(coonsPatch)
+      );
+      if (rasterizerAlgorithm === 'subdivision') {
         if (patchType === 'tensor') {
-          const tensorPatch = coonsToTensorPatch(coonsPatch);
-          if (rasterizerAlgorithm === 'ffd') {
-            renderTensorPatchWithFFDWebGL(tensorPatch, colorModel, context);
-          } else {
-            renderTensorPatchWithSubdivisionWebGL(
-              tensorPatch,
-              colorModel,
-              subdivisionCount,
-              context
-            );
-          }
+          renderTensorPatchesWithSubdivisionWebGL(
+            tensorPatches,
+            colorModel,
+            subdivisionCount,
+            context
+          );
         } else {
-          if (rasterizerAlgorithm === 'ffd') {
-            // renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
-          } else {
-            // renderCoonsPatchWithSubdivision(
-            //   coonsPatch,
-            //   colorModel,
-            //   subdivisionCount,
-            //   context
-            // );
-          }
+          // renderCoonsPatchesWithFFD(coonsPatch, colorModel, context);
+        }
+      } else {
+        if (patchType === 'tensor') {
+          renderTensorPatchesWithFFDWebGL(tensorPatches, colorModel, context);
+        } else {
+          // renderCoonsPatceshWithSubdivision(
+          //   coonsPatch,
+          //   colorModel,
+          //   subdivisionCount,
+          //   context
+          // );
         }
       }
     }
