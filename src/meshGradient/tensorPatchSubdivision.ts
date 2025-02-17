@@ -452,65 +452,47 @@ export function renderTensorPatchesWithSubdivisionWebGL(
   renderOrder.forEach((ind, i) => {
     const sortedVertexBaseIndex = i * 12;
     const vertexBaseIndex = ind * 12;
-    sortedVertices[sortedVertexBaseIndex + 0] = vertices[vertexBaseIndex + 0];
-    sortedVertices[sortedVertexBaseIndex + 1] = vertices[vertexBaseIndex + 1];
-    sortedVertices[sortedVertexBaseIndex + 4] = vertices[vertexBaseIndex + 4];
-    sortedVertices[sortedVertexBaseIndex + 2] = vertices[vertexBaseIndex + 2];
-    sortedVertices[sortedVertexBaseIndex + 3] = vertices[vertexBaseIndex + 3];
-    sortedVertices[sortedVertexBaseIndex + 5] = vertices[vertexBaseIndex + 5];
-    sortedVertices[sortedVertexBaseIndex + 6] = vertices[vertexBaseIndex + 6];
-    sortedVertices[sortedVertexBaseIndex + 7] = vertices[vertexBaseIndex + 7];
-    sortedVertices[sortedVertexBaseIndex + 8] = vertices[vertexBaseIndex + 8];
-    sortedVertices[sortedVertexBaseIndex + 9] = vertices[vertexBaseIndex + 9];
-    sortedVertices[sortedVertexBaseIndex + 10] = vertices[vertexBaseIndex + 10];
-    sortedVertices[sortedVertexBaseIndex + 11] = vertices[vertexBaseIndex + 11];
+    sortedVertices.set(
+      vertices.subarray(vertexBaseIndex, vertexBaseIndex + 12),
+      sortedVertexBaseIndex
+    );
 
-    const sortedAuxBaseIndex1 = i * 6;
-    const auxBaseIndex1 = ind * 6;
-    for (let j = 0; j < 6; j++) {
-      const sortedAuxBaseIndex2 = (sortedAuxBaseIndex1 + j) << 2;
-      const auxBaseIndex2 = (auxBaseIndex1 + j) << 2;
+    const sortedAuxBaseIndex1 = i * 24;
+    const auxBaseIndex1 = ind * 24;
+    sortedCorners1.set(
+      corners1.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
+    sortedCorners2.set(
+      corners2.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
 
-      sortedCorners1[sortedAuxBaseIndex2 + 0] = corners1[auxBaseIndex2 + 0];
-      sortedCorners1[sortedAuxBaseIndex2 + 1] = corners1[auxBaseIndex2 + 1];
-      sortedCorners1[sortedAuxBaseIndex2 + 2] = corners1[auxBaseIndex2 + 2];
-      sortedCorners1[sortedAuxBaseIndex2 + 3] = corners1[auxBaseIndex2 + 3];
+    sortedUV1.set(
+      uv1.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
+    sortedUV2.set(
+      uv2.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
 
-      sortedCorners2[sortedAuxBaseIndex2 + 0] = corners2[auxBaseIndex2 + 0];
-      sortedCorners2[sortedAuxBaseIndex2 + 1] = corners2[auxBaseIndex2 + 1];
-      sortedCorners2[sortedAuxBaseIndex2 + 2] = corners2[auxBaseIndex2 + 2];
-      sortedCorners2[sortedAuxBaseIndex2 + 3] = corners2[auxBaseIndex2 + 3];
-
-      sortedUV1[sortedAuxBaseIndex2 + 0] = uv1[auxBaseIndex2 + 0];
-      sortedUV1[sortedAuxBaseIndex2 + 1] = uv1[auxBaseIndex2 + 1];
-      sortedUV1[sortedAuxBaseIndex2 + 2] = uv1[auxBaseIndex2 + 2];
-      sortedUV1[sortedAuxBaseIndex2 + 3] = uv1[auxBaseIndex2 + 3];
-
-      sortedUV2[sortedAuxBaseIndex2 + 0] = uv2[auxBaseIndex2 + 0];
-      sortedUV2[sortedAuxBaseIndex2 + 1] = uv2[auxBaseIndex2 + 1];
-      sortedUV2[sortedAuxBaseIndex2 + 2] = uv2[auxBaseIndex2 + 2];
-      sortedUV2[sortedAuxBaseIndex2 + 3] = uv2[auxBaseIndex2 + 3];
-
-      sortedColorNorth[sortedAuxBaseIndex2 + 0] = colorNorth[auxBaseIndex2 + 0];
-      sortedColorNorth[sortedAuxBaseIndex2 + 1] = colorNorth[auxBaseIndex2 + 1];
-      sortedColorNorth[sortedAuxBaseIndex2 + 2] = colorNorth[auxBaseIndex2 + 2];
-      sortedColorNorth[sortedAuxBaseIndex2 + 3] = colorNorth[auxBaseIndex2 + 3];
-
-      sortedColorEast[sortedAuxBaseIndex2 + 0] = colorEast[auxBaseIndex2 + 0];
-      sortedColorEast[sortedAuxBaseIndex2 + 1] = colorEast[auxBaseIndex2 + 1];
-      sortedColorEast[sortedAuxBaseIndex2 + 2] = colorEast[auxBaseIndex2 + 2];
-      sortedColorEast[sortedAuxBaseIndex2 + 3] = colorEast[auxBaseIndex2 + 3];
-
-      sortedColorSouth[sortedAuxBaseIndex2 + 0] = colorSouth[auxBaseIndex2 + 0];
-      sortedColorSouth[sortedAuxBaseIndex2 + 1] = colorSouth[auxBaseIndex2 + 1];
-      sortedColorSouth[sortedAuxBaseIndex2 + 2] = colorSouth[auxBaseIndex2 + 2];
-      sortedColorSouth[sortedAuxBaseIndex2 + 3] = colorSouth[auxBaseIndex2 + 3];
-
-      sortedColorWest[sortedAuxBaseIndex2 + 0] = colorWest[auxBaseIndex2 + 0];
-      sortedColorWest[sortedAuxBaseIndex2 + 1] = colorWest[auxBaseIndex2 + 1];
-      sortedColorWest[sortedAuxBaseIndex2 + 2] = colorWest[auxBaseIndex2 + 2];
-      sortedColorWest[sortedAuxBaseIndex2 + 3] = colorWest[auxBaseIndex2 + 3];
-    }
+    sortedColorNorth.set(
+      colorNorth.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
+    sortedColorEast.set(
+      colorEast.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
+    sortedColorSouth.set(
+      colorSouth.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
+    sortedColorWest.set(
+      colorWest.subarray(auxBaseIndex1, auxBaseIndex1 + 24),
+      sortedAuxBaseIndex1
+    );
   });
 
   const shaderProgram = getShaderProgram(gl, colorModel);
