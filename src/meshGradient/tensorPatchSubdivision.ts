@@ -273,10 +273,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
 
   for (let patchInd = 0; patchInd < tensorPatches.length; patchInd++) {
     const tensorPatch = tensorPatches[patchInd];
-    // const texCoord = patchInd * 4;
-    // textureData = textureData.concat(
-    //   Object.values(tensorPatch.tensorValues).flat()
-    // );
 
     const basePatch: TensorPatch<Vec2> = {
       ...tensorPatch,
@@ -288,12 +284,20 @@ export function renderTensorPatchesWithSubdivisionWebGL(
       },
     };
 
+    const {
+      northValue: baseNorthValue,
+      eastValue: baseEastValue,
+      southValue: baseSouthValue,
+      westValue: baseWestValue,
+    } = tensorPatch.tensorValues;
+
     const baseVertexOffset = patchInd * 4 ** maxDepth * 12;
     const baseAuxOffset = 4 ** maxDepth * 6 * 4 * patchInd;
 
     let addPatchCounter = 0;
     function addPatchToAttributes(patch: TensorPatch<Vec2>) {
       const { curve0, curve3, tensorValues } = patch;
+      const { northValue, eastValue, southValue, westValue } = tensorValues;
       const vertexBaseIndex = baseVertexOffset + addPatchCounter * 12;
 
       // Add vertices
@@ -320,17 +324,17 @@ export function renderTensorPatchesWithSubdivisionWebGL(
       for (let i = 0; i < 6; i++) {
         const auxBaseIndex2 = baseAuxOffset + ((auxBaseIndex1 + i) << 2);
         // Add UV coordinates for all triangle vertices
-        uv1[auxBaseIndex2 + 0] = tensorValues.northValue[0];
-        uv1[auxBaseIndex2 + 1] = tensorValues.northValue[1];
+        uv1[auxBaseIndex2 + 0] = northValue[0];
+        uv1[auxBaseIndex2 + 1] = northValue[1];
 
-        uv1[auxBaseIndex2 + 2] = tensorValues.eastValue[0];
-        uv1[auxBaseIndex2 + 3] = tensorValues.eastValue[1];
+        uv1[auxBaseIndex2 + 2] = eastValue[0];
+        uv1[auxBaseIndex2 + 3] = eastValue[1];
 
-        uv2[auxBaseIndex2 + 0] = tensorValues.southValue[0];
-        uv2[auxBaseIndex2 + 1] = tensorValues.southValue[1];
+        uv2[auxBaseIndex2 + 0] = southValue[0];
+        uv2[auxBaseIndex2 + 1] = southValue[1];
 
-        uv2[auxBaseIndex2 + 2] = tensorValues.westValue[0];
-        uv2[auxBaseIndex2 + 3] = tensorValues.westValue[1];
+        uv2[auxBaseIndex2 + 2] = westValue[0];
+        uv2[auxBaseIndex2 + 3] = westValue[1];
 
         // Add corners
         // North
@@ -353,25 +357,25 @@ export function renderTensorPatchesWithSubdivisionWebGL(
         // texCoords[vertexBaseIndex + i] = texCoord;
 
         // Add colors
-        colorNorth[auxBaseIndex2 + 0] = tensorPatch.tensorValues.northValue[0];
-        colorNorth[auxBaseIndex2 + 1] = tensorPatch.tensorValues.northValue[1];
-        colorNorth[auxBaseIndex2 + 2] = tensorPatch.tensorValues.northValue[2];
-        colorNorth[auxBaseIndex2 + 3] = tensorPatch.tensorValues.northValue[3];
+        colorNorth[auxBaseIndex2 + 0] = baseNorthValue[0];
+        colorNorth[auxBaseIndex2 + 1] = baseNorthValue[1];
+        colorNorth[auxBaseIndex2 + 2] = baseNorthValue[2];
+        colorNorth[auxBaseIndex2 + 3] = baseNorthValue[3];
 
-        colorEast[auxBaseIndex2 + 0] = tensorPatch.tensorValues.eastValue[0];
-        colorEast[auxBaseIndex2 + 1] = tensorPatch.tensorValues.eastValue[1];
-        colorEast[auxBaseIndex2 + 2] = tensorPatch.tensorValues.eastValue[2];
-        colorEast[auxBaseIndex2 + 3] = tensorPatch.tensorValues.eastValue[3];
+        colorEast[auxBaseIndex2 + 0] = baseEastValue[0];
+        colorEast[auxBaseIndex2 + 1] = baseEastValue[1];
+        colorEast[auxBaseIndex2 + 2] = baseEastValue[2];
+        colorEast[auxBaseIndex2 + 3] = baseEastValue[3];
 
-        colorSouth[auxBaseIndex2 + 0] = tensorPatch.tensorValues.southValue[0];
-        colorSouth[auxBaseIndex2 + 1] = tensorPatch.tensorValues.southValue[1];
-        colorSouth[auxBaseIndex2 + 2] = tensorPatch.tensorValues.southValue[2];
-        colorSouth[auxBaseIndex2 + 3] = tensorPatch.tensorValues.southValue[3];
+        colorSouth[auxBaseIndex2 + 0] = baseSouthValue[0];
+        colorSouth[auxBaseIndex2 + 1] = baseSouthValue[1];
+        colorSouth[auxBaseIndex2 + 2] = baseSouthValue[2];
+        colorSouth[auxBaseIndex2 + 3] = baseSouthValue[3];
 
-        colorWest[auxBaseIndex2 + 0] = tensorPatch.tensorValues.westValue[0];
-        colorWest[auxBaseIndex2 + 1] = tensorPatch.tensorValues.westValue[1];
-        colorWest[auxBaseIndex2 + 2] = tensorPatch.tensorValues.westValue[2];
-        colorWest[auxBaseIndex2 + 3] = tensorPatch.tensorValues.westValue[3];
+        colorWest[auxBaseIndex2 + 0] = baseWestValue[0];
+        colorWest[auxBaseIndex2 + 1] = baseWestValue[1];
+        colorWest[auxBaseIndex2 + 2] = baseWestValue[2];
+        colorWest[auxBaseIndex2 + 3] = baseWestValue[3];
       }
 
       addPatchCounter++;
