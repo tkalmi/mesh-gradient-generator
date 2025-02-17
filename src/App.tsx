@@ -318,13 +318,17 @@ function App() {
         rowCount
       );
       const coonsPatches = patches.map((patch) => coordinatesToPixels(patch));
-      const tensorPatches = coonsPatches.map((coonsPatch) =>
+      const tensorPatches = coonsPatches.map((coonsPatch, ind) =>
         coonsToTensorPatch(coonsPatch)
       );
       if (rasterizerAlgorithm === 'subdivision') {
         if (patchType === 'tensor') {
           renderTensorPatchesWithSubdivisionWebGL(
-            tensorPatches,
+            tensorPatches.map((patch, ind) => ({
+              patch,
+              x: ind % columnCount,
+              y: Math.floor(ind / columnCount),
+            })),
             colorModel,
             subdivisionCount,
             context
