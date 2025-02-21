@@ -1,5 +1,5 @@
 export function initShaderProgram(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   vertexShaderSource: string,
   fragmentShaderSource: string
 ): WebGLProgram {
@@ -23,10 +23,10 @@ export function initShaderProgram(
 }
 
 function loadShader(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   type:
-    | WebGLRenderingContextBase['VERTEX_SHADER']
-    | WebGLRenderingContextBase['FRAGMENT_SHADER'],
+    | WebGL2RenderingContext['VERTEX_SHADER']
+    | WebGL2RenderingContext['FRAGMENT_SHADER'],
   source: string
 ): WebGLShader {
   const shader = gl.createShader(type)!;

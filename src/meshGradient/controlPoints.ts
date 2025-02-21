@@ -88,7 +88,7 @@ export function renderControlPoints2d(
 }
 
 export function renderControlPointsWebGL(
-  gl: WebGLRenderingContext,
+  gl: WebGL2RenderingContext,
   columns: CubicBezier[],
   rows: CubicBezier[]
 ) {
@@ -156,13 +156,15 @@ export function renderControlPointsWebGL(
     },
   };
 
-  function initBuffers(gl: WebGLRenderingContext) {
+  function initBuffers(gl: WebGL2RenderingContext) {
     const positionBuffer = initCtrlPointPositionBuffer(gl);
 
     return { a_position: positionBuffer };
   }
 
-  function initCtrlPointPositionBuffer(gl: WebGLRenderingContext): WebGLBuffer {
+  function initCtrlPointPositionBuffer(
+    gl: WebGL2RenderingContext
+  ): WebGLBuffer {
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
@@ -172,7 +174,7 @@ export function renderControlPointsWebGL(
   }
 
   function setPositionAttribute(
-    gl: WebGLRenderingContext,
+    gl: WebGL2RenderingContext,
     buffers: { a_position: WebGLBuffer },
     programInfo: {
       program: WebGLShader;
@@ -203,7 +205,7 @@ export function renderControlPointsWebGL(
   }
 
   function drawCtrlPoints(
-    gl: WebGLRenderingContext,
+    gl: WebGL2RenderingContext,
     buffers: { a_position: WebGLBuffer },
     programInfo: {
       program: WebGLShader;
@@ -246,13 +248,13 @@ export function renderControlPointsWebGL(
  * @param rows rows formed by control points
  */
 export function renderControlPoints(
-  context: CanvasRenderingContext2D | WebGLRenderingContext,
+  context: CanvasRenderingContext2D | WebGL2RenderingContext,
   columns: CubicBezier[],
   rows: CubicBezier[],
   showControlPoints: boolean,
   showBezierCurves: boolean
 ) {
-  if (context instanceof WebGLRenderingContext) {
+  if (context instanceof WebGL2RenderingContext) {
     renderControlPointsWebGL(
       context,
       columns,

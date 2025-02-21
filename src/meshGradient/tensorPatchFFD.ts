@@ -270,31 +270,31 @@ function getFsSource(colorModel: ColorModel) {
 let globalShaderProgramRGB: WebGLProgram;
 let globalShaderProgramHSL: WebGLProgram;
 let globalShaderProgramLCH: WebGLProgram;
-let globalWebGLRenderingContext: WebGLRenderingContext | null = null;
+let globalWebGL2RenderingContext: WebGL2RenderingContext | null = null;
 // TODO: Make this into a proper singleton
-function getShaderProgram(gl: WebGLRenderingContext, colorModel: ColorModel) {
+function getShaderProgram(gl: WebGL2RenderingContext, colorModel: ColorModel) {
   switch (colorModel) {
     case 'hsla':
       globalShaderProgramHSL =
-        !globalShaderProgramHSL || globalWebGLRenderingContext !== gl
+        !globalShaderProgramHSL || globalWebGL2RenderingContext !== gl
           ? initShaderProgram(gl, vsSource, getFsSource(colorModel))
           : globalShaderProgramHSL;
-      globalWebGLRenderingContext = gl;
+      globalWebGL2RenderingContext = gl;
       return globalShaderProgramHSL;
     case 'lcha':
       globalShaderProgramLCH =
-        !globalShaderProgramLCH || globalWebGLRenderingContext !== gl
+        !globalShaderProgramLCH || globalWebGL2RenderingContext !== gl
           ? initShaderProgram(gl, vsSource, getFsSource(colorModel))
           : globalShaderProgramLCH;
-      globalWebGLRenderingContext = gl;
+      globalWebGL2RenderingContext = gl;
       return globalShaderProgramLCH;
     case 'rgba':
     default:
       globalShaderProgramRGB =
-        !globalShaderProgramRGB || globalWebGLRenderingContext !== gl
+        !globalShaderProgramRGB || globalWebGL2RenderingContext !== gl
           ? initShaderProgram(gl, vsSource, getFsSource(colorModel))
           : globalShaderProgramRGB;
-      globalWebGLRenderingContext = gl;
+      globalWebGL2RenderingContext = gl;
       return globalShaderProgramRGB;
   }
 }
@@ -302,7 +302,7 @@ function getShaderProgram(gl: WebGLRenderingContext, colorModel: ColorModel) {
 export function renderTensorPatchesWithFFDWebGL(
   patches: TensorPatch<Color>[],
   colorModel: ColorModel,
-  gl: WebGLRenderingContext
+  gl: WebGL2RenderingContext
 ) {
   patches.forEach((patch) =>
     renderTensorPatchWithFFDWebGL(patch, colorModel, gl)
@@ -312,7 +312,7 @@ export function renderTensorPatchesWithFFDWebGL(
 function renderTensorPatchWithFFDWebGL(
   patch: TensorPatch<Color>,
   colorModel: ColorModel,
-  gl: WebGLRenderingContext
+  gl: WebGL2RenderingContext
 ) {
   const { curve0, curve1, curve2, curve3, tensorValues } = patch;
   const curves = [curve0, curve1, curve2, curve3];

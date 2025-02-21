@@ -170,12 +170,12 @@ function App() {
     'ffd' | 'subdivision'
   >('subdivision');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
-  const [subdivisionCount, setSubdivisionCount] = useState(7);
-  const [renderContext, setRenderContext] = useState<'2d' | 'webgl'>('webgl');
+  const [subdivisionCount, setSubdivisionCount] = useState(0);
+  const [renderContext, setRenderContext] = useState<'2d' | 'webgl2'>('webgl2');
   const [showBezierCurves, setShowBezierCurves] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(true);
-  const [rowCount, setRowCount] = useState(3);
-  const [columnCount, setColumnCount] = useState(3);
+  const [rowCount, setRowCount] = useState(1);
+  const [columnCount, setColumnCount] = useState(1);
   // In RGBA, two for each row
   const [rawColors, setColors] = useState<Color[]>(
     getColors(rowCount, columnCount)
@@ -254,8 +254,8 @@ function App() {
   useEffect(() => {
     const context = (() => {
       const canvas = canvasRef.current!;
-      if (renderContext === 'webgl') {
-        const context = canvas.getContext('webgl')!;
+      if (renderContext === 'webgl2') {
+        const context = canvas.getContext('webgl2')!;
         context.clearColor(0.0, 0.0, 0.0, 1.0);
         context.clearDepth(1);
         context.enable(context.DEPTH_TEST);
@@ -309,7 +309,7 @@ function App() {
           }
         }
       }
-    } else if (context instanceof WebGLRenderingContext) {
+    } else if (context instanceof WebGL2RenderingContext) {
       const patches = getCoonsPatchFromRowsAndColumns(
         columns,
         rows,
@@ -318,7 +318,7 @@ function App() {
         rowCount
       );
       const coonsPatches = patches.map((patch) => coordinatesToPixels(patch));
-      const tensorPatches = coonsPatches.map((coonsPatch, ind) =>
+      const tensorPatches = coonsPatches.map((coonsPatch) =>
         coonsToTensorPatch(coonsPatch)
       );
       if (rasterizerAlgorithm === 'subdivision') {
@@ -672,14 +672,14 @@ function App() {
           <label>
             <input
               type="radio"
-              value="webgl"
-              id="webgl"
+              value="webgl2"
+              id="webgl2"
               name="renderContext"
-              disabled={!window.WebGLRenderingContext}
-              checked={renderContext === 'webgl'}
-              onChange={() => setRenderContext('webgl')}
+              disabled={!window.WebGL2RenderingContext}
+              checked={renderContext === 'webgl2'}
+              onChange={() => setRenderContext('webgl2')}
             />{' '}
-            WebGL
+            WebGL2
           </label>
         </fieldset>
 
@@ -798,7 +798,7 @@ function App() {
             onMouseDown={handleMouseDown}
           />
         )}
-        {renderContext === 'webgl' && (
+        {renderContext === 'webgl2' && (
           <canvas
             width={800}
             height={600}

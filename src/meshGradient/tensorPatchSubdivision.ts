@@ -247,7 +247,7 @@ const fsSource = /*glsl*/ `
   }
 `;
 
-function getShaderProgram(gl: WebGLRenderingContext, colorModel: ColorModel) {
+function getShaderProgram(gl: WebGL2RenderingContext, colorModel: ColorModel) {
   // TODO: Take color model into account
   return initShaderProgram(gl, vsSource, fsSource);
 }
@@ -256,7 +256,7 @@ export function renderTensorPatchesWithSubdivisionWebGL(
   tensorPatches: { patch: TensorPatch<Color>; x: number; y: number }[],
   colorModel: ColorModel,
   maxDepth: number,
-  gl: WebGLRenderingContext
+  gl: WebGL2RenderingContext
 ) {
   const vertices = new Float32Array(4 ** maxDepth * 12 * tensorPatches.length);
   const uv1 = new Float32Array(4 ** maxDepth * 6 * 4 * tensorPatches.length);
