@@ -178,13 +178,6 @@ const vsSource = /*glsl*/ `
   varying vec4 v_color_west;
   varying vec2 v_uv;
 
-  vec4 bilinearPixelInterpolation(float u, float v) {
-    vec4 colorTop = mix(a_color_north, a_color_east, u);
-    vec4 colorBottom = mix(a_color_west, a_color_south, u);
-
-    return mix(colorTop, colorBottom, v);
-  }
-
   // Use barycentric coordinates to get the UV value of any point
   vec2 getUV(vec2 point) {
     float EPSILON = 0.00000001;
