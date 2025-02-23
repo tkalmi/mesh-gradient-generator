@@ -193,7 +193,8 @@ const vsSource = /*glsl*/ `#version 300 es
   }
 `;
 
-const fsSource = /*glsl*/ `#version 300 es
+function getFsSource(colorModel: ColorModel) {
+  const fsSource = /*glsl*/ `#version 300 es
   precision highp float;
 
   uniform sampler2D u_color_texture;
@@ -205,14 +206,141 @@ const fsSource = /*glsl*/ `#version 300 es
 
   out vec4 outputColor;
 
+  vec4 hslaToRgba(vec4 hsla) {
+    float h = hsla.x;
+    float s = hsla.y;
+    float l = hsla.z;
+
+    // Chroma, the intensity of the color
+    float c = (1.0 - abs(2.0 * l - 1.0)) * s;
+
+    // X and m for the RGB conversion
+    float x = c * (1.0 - abs(mod(h * 6.0, 2.0) - 1.0));  // Intermediate color calculation
+    float m = l - 0.5 * c;  // Adjustment for lightness
+
+    // RGB intermediate values
+    float r, g, b;
+
+    float sixth = 0.166666666666;
+
+    if (h < 1.0 * sixth) {
+        r = c; g = x; b = 0.0;
+    } else if (h < 2.0 * sixth) {
+        r = x; g = c; b = 0.0;
+    } else if (h < 3.0 * sixth) {
+        r = 0.0; g = c; b = x;
+    } else if (h < 4.0 * sixth) {
+        r = 0.0; g = x; b = c;
+    } else if (h < 5.0 * sixth) {
+        r = x; g = 0.0; b = c;
+    } else {
+        r = c; g = 0.0; b = x;
+    }
+
+    // Adjust by m to get final RGB values
+    r += m;
+    g += m;
+    b += m;
+
+    // Return final RGBA vec4
+    return vec4(r, g, b, 1.0); // alpha is converted back to [0, 255]
+  }
+
+  vec4 lchaToRgba(vec4 lcha) {
+    float L = lcha.x;
+    float C = lcha.y;
+    float H = lcha.z;
+
+    H = radians(H); // Convert from [0,1] to degrees, then to radians
+
+    // Convert LCH to Lab
+    float a = C * cos(H);
+    float b = C * sin(H);
+
+    float one116th = 0.008620689655172414; // 1.0 / 116.0
+    // Convert Lab to XYZ (D65)
+    float Y = (L + 16.0) * one116th;
+    float X = a * 0.002 + Y;
+    float Z = Y - b * 0.005;
+
+    float xPow3 = X * X * X;
+    float yPow3 = Y * Y * Y;
+    float zPow3 = Z * Z * Z;
+
+    // Reverse gamma correction
+    X = 95.047 * ((xPow3 > 0.008856) ? (xPow3) : ((X - 16.0 * one116th) * 0.1284191601386927));
+    Y = 100.000 * ((yPow3 > 0.008856) ? (yPow3) : ((Y - 16.0 * one116th) * 0.1284191601386927));
+    Z = 108.883 * ((zPow3 > 0.008856) ? (zPow3) : ((Z - 16.0 * one116th) * 0.1284191601386927));
+
+    X *= 0.01;
+    Y *= 0.01;
+    Z *= 0.01;
+
+    // Convert XYZ to linear sRGB
+    float r = X *  3.2406 + Y * -1.5372 + Z * -0.4986;
+    float g = X * -0.9689 + Y *  1.8758 + Z *  0.0415;
+    b = X *  0.0557 + Y * -0.2040 + Z *  1.0570;
+
+    // Apply gamma correction (sRGB)
+    float one24th = 0.4166666666666667; // 1.0 / 2.4
+    r = (r > 0.0031308) ? (1.055 * pow(r, one24th) - 0.055) : (12.92 * r);
+    g = (g > 0.0031308) ? (1.055 * pow(g, one24th) - 0.055) : (12.92 * g);
+    b = (b > 0.0031308) ? (1.055 * pow(b, one24th) - 0.055) : (12.92 * b);
+
+    // Clamp to valid RGB range
+    return clamp(vec4(r, g, b, 1.0), 0.0, 1.0);
+  }
+
+  vec4 readHslaColor(vec4 rawColor) {
+    // Normalize input values
+    float h = rawColor.x * 255.0;
+    float s = rawColor.y * 255.0;
+    // Since RGBA texture in WebGL can store only 8-bit values, store the additional hue bit in saturation, as hue is in range [0, 360] (= it needs 9 bits) and saturation is in range [0, 100] (= needs only 7 bits).
+    if (s > 100.0) {
+      h += 128.0;
+      s -= 128.0;
+    }
+    h *= 0.002777777777777778; // Hue: [0, 360] -> [0, 1]
+    s *= 0.01; // Saturation: [0, 100] -> [0, 1]
+    float l = rawColor.z * 2.55;     // Lightness: [0, 100] -> [0, 1]
+    return vec4(h, s, l, 1.0);
+  }
+
+  vec4 readLchaColor(vec4 rawColor) {
+    float L = rawColor.x * 255.0;  // Convert from [0,1] to [0,100]
+    float C = rawColor.y * 255.0;  // Convert from [0,1] to [0,Inf]
+    float H = rawColor.z * 255.0;
+
+    if (L > 100.0) {
+      L -= 128.0;
+      H += 128.0;
+    }
+
+    return vec4(L, C, H, 255.0);
+  }
+
+  vec4 readColor(vec2 texcoord) {
+    ${(() => {
+      switch (colorModel) {
+        case 'hsla':
+          return 'return readHslaColor(texture(u_color_texture, texcoord));';
+        case 'lcha':
+          return 'return readLchaColor(texture(u_color_texture, texcoord));';
+        case 'rgba':
+        default:
+          return 'return texture(u_color_texture, texcoord);';
+      }
+    })()}
+  }
+
 
   vec4 bilinearPixelInterpolation() {
     float xStep = 1.0 / (u_col_row_count.x);
     float yStep = 1.0 / (u_col_row_count.y);
-    vec4 northColor = texture(u_color_texture, v_texcoord);
-    vec4 eastColor = texture(u_color_texture, v_texcoord + vec2(xStep, 0.0));
-    vec4 southColor = texture(u_color_texture, v_texcoord + vec2(xStep, yStep));
-    vec4 westColor = texture(u_color_texture, v_texcoord + vec2(0.0, yStep));
+    vec4 northColor = readColor(v_texcoord);
+    vec4 eastColor = readColor(v_texcoord + vec2(xStep, 0.0));
+    vec4 southColor = readColor(v_texcoord + vec2(xStep, yStep));
+    vec4 westColor = readColor(v_texcoord + vec2(0.0, yStep));
 
     vec4 colorTop = mix(northColor, eastColor, v_uv.x);
     vec4 colorBottom = mix(westColor, southColor, v_uv.x);
@@ -221,13 +349,27 @@ const fsSource = /*glsl*/ `#version 300 es
   }
 
   void main() {
-    outputColor = bilinearPixelInterpolation();
+    vec4 color = bilinearPixelInterpolation();
+    ${(() => {
+      switch (colorModel) {
+        case 'hsla':
+          return 'outputColor = hslaToRgba(color);';
+        case 'lcha':
+          return 'outputColor = lchaToRgba(color);';
+        case 'rgba':
+        default:
+          return 'outputColor = color;';
+      }
+    })()}
   }
 `;
 
+  return fsSource;
+}
+
 function getShaderProgram(gl: WebGL2RenderingContext, colorModel: ColorModel) {
   // TODO: Take color model into account
-  return initShaderProgram(gl, vsSource, fsSource);
+  return initShaderProgram(gl, vsSource, getFsSource(colorModel));
 }
 
 export function renderTensorPatchesWithSubdivisionWebGL(
@@ -567,6 +709,25 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    // Remap colors with a trick to fit them in 8-bit values: in HSL, S is in range [0, 100], whereas H is in range [0, 360]. Therefore, S fits in 7 bits and H in 9 bits; so 16 bits in total. Use the unused bit in S to pack the extra bit in H.
+    if (colorModel === 'hsla') {
+      for (let i = 0; i < colorTextureData.length; i += 4) {
+        if (colorTextureData[i] > 255) {
+          colorTextureData[i] -= 128;
+          colorTextureData[i + 1] += 128;
+        }
+      }
+    }
+    // Similarly to LCH, fit the extra H bit to the unused L bit.
+    else if (colorModel === 'lcha') {
+      for (let i = 0; i < colorTextureData.length; i++) {
+        if (colorTextureData[i] > 255) {
+          colorTextureData[i] -= 128;
+          colorTextureData[i - 2] += 128;
+        }
+      }
+    }
 
     gl.texImage2D(
       gl.TEXTURE_2D,
