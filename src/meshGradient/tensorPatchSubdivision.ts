@@ -154,11 +154,16 @@ type ProgramInfo = WebGLProgramInfo<
   }
 >;
 
+const POSITION_LOCATION = 0;
+const UV_NE_LOCATION = 1;
+const UV_SW_LOCATION = 2;
+const TEXCOORD_LOCATION = 3;
+
 const vsSource = /*glsl*/ `#version 300 es
-  in vec2 a_position;
-  in vec4 a_uv_north_east;
-  in vec4 a_uv_south_west;
-  in vec2 a_texcoord;
+  layout(location = ${POSITION_LOCATION}) in vec2 a_position;
+  layout(location = ${UV_NE_LOCATION}) in vec4 a_uv_north_east;
+  layout(location = ${UV_SW_LOCATION}) in vec4 a_uv_south_west;
+  layout(location = ${TEXCOORD_LOCATION}) in vec2 a_texcoord;
 
   uniform vec2 u_resolution;
   uniform vec2 u_col_row_count;
@@ -574,10 +579,10 @@ export function renderTensorPatchesWithSubdivisionWebGL(
   const programInfo: ProgramInfo = {
     program: shaderProgram,
     attribLocations: {
-      a_position: gl.getAttribLocation(shaderProgram, 'a_position'),
-      a_uv_north_east: gl.getAttribLocation(shaderProgram, 'a_uv_north_east'),
-      a_uv_south_west: gl.getAttribLocation(shaderProgram, 'a_uv_south_west'),
-      a_texcoord: gl.getAttribLocation(shaderProgram, 'a_texcoord'),
+      a_position: POSITION_LOCATION,
+      a_uv_north_east: UV_NE_LOCATION,
+      a_uv_south_west: UV_SW_LOCATION,
+      a_texcoord: TEXCOORD_LOCATION,
     },
     uniformLocations: {
       u_resolution: gl.getUniformLocation(shaderProgram, 'u_resolution')!,
