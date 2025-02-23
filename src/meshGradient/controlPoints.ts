@@ -117,8 +117,9 @@ export function renderControlPointsWebGL(
     })
     .flat();
 
-  const vsSource = /*glsl*/ `
-    attribute vec2 a_position;
+  const vsSource = /*glsl*/ `#version 300 es
+    in vec2 a_position;
+
     uniform vec2 u_resolution;
 
     void main() {
@@ -135,12 +136,14 @@ export function renderControlPointsWebGL(
     }
   `;
 
-  const fsSource = /*glsl*/ `
+  const fsSource = /*glsl*/ `#version 300 es
     precision mediump float;
+
+    out vec4 outputColor;
 
     void main() {
 
-      gl_FragColor = vec4(1.0,1.0,1.0,1.0);
+      outputColor = vec4(1.0,1.0,1.0,1.0);
     }
   `;
 
