@@ -90,8 +90,13 @@ export function renderControlPoints2d(
 export function renderControlPointsWebGL(
   gl: WebGL2RenderingContext,
   columns: CubicBezier[],
-  rows: CubicBezier[]
+  rows: CubicBezier[],
+  showControlPoints: boolean,
+  showBezierCurves: boolean
 ) {
+  if (!showControlPoints) {
+    return;
+  }
   const width = gl.canvas.width;
   const height = gl.canvas.height;
   const totalSlicesPerCircle = 50;
