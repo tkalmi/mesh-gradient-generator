@@ -150,59 +150,31 @@ type ProgramInfo = WebGLProgramInfo<
     u_resolution: WebGLUniformLocation;
     u_colors: WebGLUniformLocation;
     u_color_texture: WebGLUniformLocation;
-    u_corner_texture: WebGLUniformLocation;
     u_col_row_count: WebGLUniformLocation;
   }
 >;
 
 const vsSource = /*glsl*/ `#version 300 es
-  precision highp float;
-  precision highp usampler2D;
-
   in vec2 a_position;
   in vec4 a_uv_north_east;
   in vec4 a_uv_south_west;
   in vec2 a_texcoord;
-  
+
   uniform vec2 u_resolution;
   uniform vec2 u_col_row_count;
-  uniform usampler2D u_corner_texture;
-  
+
   out vec4 v_position;
   out vec2 v_uv;
   out vec2 v_texcoord;
 
   // Use barycentric coordinates to get the UV value of any point
-  vec2 getUV(vec2 point) {
-    float EPSILON = 0.00000001;
-    float xStep = 1.0 / (u_col_row_count.x);
-    float yStep = 1.0 / (u_col_row_count.y);
-
-    uvec4 texel = texture(u_corner_texture, a_texcoord);
-    vec2 p1 = vec2(texel.xy);
-    texel = texture(u_corner_texture, a_texcoord + vec2(xStep, 0.0));
-    vec2 p2 = vec2(texel.xy);
-    texel = texture(u_corner_texture, a_texcoord + vec2(xStep, yStep));
-    vec2 p3 = vec2(texel.xy);
-    texel = texture(u_corner_texture, a_texcoord + vec2(0.0, yStep));
-    vec2 p4 = vec2(texel.xy);
-
-    float d1 = length(point - p1);
-    float d2 = length(point - p2);
-    float d3 = length(point - p3);
-    float d4 = length(point - p4);
-
-    float w1 = 1.0 / (d1 + EPSILON);
-    float w2 = 1.0 / (d2 + EPSILON);
-    float w3 = 1.0 / (d3 + EPSILON);
-    float w4 = 1.0 / (d4 + EPSILON);
-
+  vec2 getUV() {
     vec2 v1 = a_uv_north_east.xy;
     vec2 v2 = a_uv_north_east.zw;
     vec2 v3 = a_uv_south_west.xy;
     vec2 v4 = a_uv_south_west.zw;
 
-    vec2 uv = (v1 * w1 + v2 * w2 + v3 * w3 + v4 * w4) / (w1 + w2 + w3 + w4);
+    vec2 uv = (v1 + v2 + v3 + v4) * 0.25;
 
     return uv;
   }
@@ -217,7 +189,7 @@ const vsSource = /*glsl*/ `#version 300 es
 
     v_texcoord = a_texcoord;
 
-    v_uv = getUV(a_position.xy);
+    v_uv = getUV();
   }
 `;
 
@@ -275,9 +247,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
   const colorTextureData = new Float32Array(
     4 * (colCount + 1) * (rowCount + 1)
   );
-  const cornerTextureData = new Uint16Array(
-    4 * (colCount + 1) * (rowCount + 1)
-  );
 
   const quadMinUV: Vec2[] = new Array(4 ** maxDepth * tensorPatches.length);
 
@@ -294,12 +263,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     colorTextureData.set(tensorPatch.tensorValues.eastValue, eastInd);
     colorTextureData.set(tensorPatch.tensorValues.southValue, southInd);
     colorTextureData.set(tensorPatch.tensorValues.westValue, westInd);
-
-    // Set corner texture
-    cornerTextureData.set(tensorPatch.curve0[0], northInd);
-    cornerTextureData.set(tensorPatch.curve0[3], eastInd);
-    cornerTextureData.set(tensorPatch.curve3[3], southInd);
-    cornerTextureData.set(tensorPatch.curve3[0], westInd);
 
     const basePatch: TensorPatch<Vec2> = {
       ...tensorPatch,
@@ -478,10 +441,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
       u_resolution: gl.getUniformLocation(shaderProgram, 'u_resolution')!,
       u_colors: gl.getUniformLocation(shaderProgram, 'u_colors')!,
       u_color_texture: gl.getUniformLocation(shaderProgram, 'u_color_texture')!,
-      u_corner_texture: gl.getUniformLocation(
-        shaderProgram,
-        'u_corner_texture'
-      )!,
       u_col_row_count: gl.getUniformLocation(shaderProgram, 'u_col_row_count')!,
     },
   };
@@ -622,29 +581,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     );
 
     gl.uniform1i(programInfo.uniformLocations.u_color_texture, 0);
-
-    const texture1 = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, texture1);
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA16UI,
-      colCount + 1,
-      rowCount + 1,
-      0,
-      gl.RGBA_INTEGER,
-      gl.UNSIGNED_SHORT,
-      cornerTextureData
-    );
-
-    gl.uniform1i(programInfo.uniformLocations.u_corner_texture, 1);
 
     gl.uniform2f(
       programInfo.uniformLocations.u_resolution,
