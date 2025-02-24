@@ -180,6 +180,7 @@ function App() {
   const [rawColors, setColors] = useState<Color[]>(
     getColors(rowCount, columnCount)
   );
+  const [useSimpleUV, setUseSimpleUV] = useState(false);
 
   const { columns, rows } = getColumnsAndRowsFromPoints(
     points,
@@ -331,6 +332,7 @@ function App() {
             })),
             colorModel,
             subdivisionCount,
+            useSimpleUV,
             context
           );
         } else {
@@ -371,6 +373,7 @@ function App() {
     renderContext,
     showControlPoints,
     showBezierCurves,
+    useSimpleUV,
   ]);
 
   useEffect(() => {
@@ -680,6 +683,32 @@ function App() {
               onChange={() => setRenderContext('webgl2')}
             />{' '}
             WebGL2
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Use simple UV</legend>
+          <label>
+            <input
+              type="radio"
+              value="true"
+              id="useSimpleUV-true"
+              name="useSimpleUV"
+              checked={useSimpleUV}
+              onChange={() => setUseSimpleUV(true)}
+            />{' '}
+            True
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="false"
+              id="useSimpleUV-false"
+              name="useSimpleUV"
+              checked={!useSimpleUV}
+              onChange={() => setUseSimpleUV(false)}
+            />{' '}
+            False
           </label>
         </fieldset>
 
