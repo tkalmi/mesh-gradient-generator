@@ -169,8 +169,8 @@ function getVsSource(useSimpleUV: boolean) {
   layout(location = ${UV_NE_LOCATION}) in vec4 a_uv_north_east;
   layout(location = ${UV_SW_LOCATION}) in vec4 a_uv_south_west;
   layout(location = ${NORTH_COLOR_LOCATION}) in vec2 a_north_color_location;
-  layout (location = ${CORNERS_NE_LOCATION}) in vec4 a_corners_north_east;
-  layout (location = ${CORNERS_SW_LOCATION}) in vec4 a_corners_south_west;
+  layout(location = ${CORNERS_NE_LOCATION}) in vec4 a_corners_north_east;
+  layout(location = ${CORNERS_SW_LOCATION}) in vec4 a_corners_south_west;
 
   uniform vec2 u_resolution;
   uniform vec2 u_col_row_count;
