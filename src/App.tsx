@@ -256,7 +256,9 @@ function App() {
     const context = (() => {
       const canvas = canvasRef.current!;
       if (renderContext === 'webgl2') {
-        const context = canvas.getContext('webgl2')!;
+        const context = canvas.getContext('webgl2', { alpha: true })!;
+        context.enable(context.BLEND);
+        context.blendFunc(context.SRC_ALPHA, context.ONE_MINUS_SRC_ALPHA);
         context.clearColor(0.0, 0.0, 0.0, 1.0);
         context.clearDepth(1);
         context.enable(context.DEPTH_TEST);
