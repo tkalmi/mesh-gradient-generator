@@ -14,16 +14,7 @@ import {
   rgbaToHsla,
   rgbaToLcha,
 } from './meshGradient/colors';
-import {
-  renderTensorPatchWithFFD2d,
-  renderTensorPatchesWithFFDWebGL,
-} from './meshGradient/tensorPatchFFD';
-import {
-  renderTensorPatchWithSubdivision2d,
-  renderTensorPatchesWithSubdivisionWebGL,
-} from './meshGradient/tensorPatchSubdivision';
-import { renderCoonsPatchWithFFD } from './meshGradient/coonsPatchFFD';
-import { renderCoonsPatchWithSubdivision } from './meshGradient/coonsPatchSubdivision';
+import { renderTensorPatchesWithSubdivisionWebGL } from './meshGradient/tensorPatchSubdivision';
 import { renderControlPoints } from './meshGradient/controlPoints';
 
 function getNewPoints(rowCount: number, columnCount: number): Vec2[] {
@@ -165,13 +156,8 @@ function App() {
 
   const [points, setPoints] = useState<Vec2[]>(getNewPoints(1, 1));
 
-  const [patchType, setPatchType] = useState<'coons' | 'tensor'>('tensor');
-  const [rasterizerAlgorithm, setRasterizerAlgorithm] = useState<
-    'ffd' | 'subdivision'
-  >('subdivision');
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(0);
-  const [renderContext, setRenderContext] = useState<'2d' | 'webgl2'>('webgl2');
   const [showBezierCurves, setShowBezierCurves] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(true);
   const [rowCount, setRowCount] = useState(1);
@@ -255,104 +241,40 @@ function App() {
   useEffect(() => {
     const context = (() => {
       const canvas = canvasRef.current!;
-      if (renderContext === 'webgl2') {
-        const context = canvas.getContext('webgl2', { alpha: true })!;
-        context.enable(context.BLEND);
-        context.blendFunc(context.SRC_ALPHA, context.ONE_MINUS_SRC_ALPHA);
-        context.clearColor(0.0, 0.0, 0.0, 1.0);
-        context.clearDepth(1);
-        context.enable(context.DEPTH_TEST);
-        context.depthFunc(context.LEQUAL);
-        context.viewport(0, 0, context.canvas.width, context.canvas.height);
-        context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
-        return context;
-      } else if (renderContext === '2d') {
-        const context = canvas.getContext('2d')!;
-        context.fillStyle = 'black';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        return context;
-      } else {
-        throw Error('Unknown render context option selected.');
-      }
+      const context = canvas.getContext('webgl2', { alpha: true })!;
+      context.enable(context.BLEND);
+      context.blendFunc(context.SRC_ALPHA, context.ONE_MINUS_SRC_ALPHA);
+      context.clearColor(0.0, 0.0, 0.0, 1.0);
+      context.clearDepth(1);
+      context.enable(context.DEPTH_TEST);
+      context.depthFunc(context.LEQUAL);
+      context.viewport(0, 0, context.canvas.width, context.canvas.height);
+      context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
+      return context;
     })();
 
-    if (context instanceof CanvasRenderingContext2D) {
-      const patches = getCoonsPatchFromRowsAndColumns(
-        columns,
-        rows,
-        convertedColors,
-        columnCount,
-        rowCount
-      );
-
-      for (const patch of patches) {
-        const coonsPatch = coordinatesToPixels(patch);
-        if (patchType === 'tensor') {
-          const tensorPatch = coonsToTensorPatch(coonsPatch);
-          if (rasterizerAlgorithm === 'ffd') {
-            renderTensorPatchWithFFD2d(tensorPatch, colorModel, context);
-          } else {
-            renderTensorPatchWithSubdivision2d(
-              tensorPatch,
-              colorModel,
-              subdivisionCount,
-              context
-            );
-          }
-        } else {
-          if (rasterizerAlgorithm === 'ffd') {
-            renderCoonsPatchWithFFD(coonsPatch, colorModel, context);
-          } else {
-            renderCoonsPatchWithSubdivision(
-              coonsPatch,
-              colorModel,
-              subdivisionCount,
-              context
-            );
-          }
-        }
-      }
-    } else if (context instanceof WebGL2RenderingContext) {
-      const patches = getCoonsPatchFromRowsAndColumns(
-        columns,
-        rows,
-        convertedColors,
-        columnCount,
-        rowCount
-      );
-      const coonsPatches = patches.map((patch) => coordinatesToPixels(patch));
-      const tensorPatches = coonsPatches.map((coonsPatch) =>
-        coonsToTensorPatch(coonsPatch)
-      );
-      if (rasterizerAlgorithm === 'subdivision') {
-        if (patchType === 'tensor') {
-          renderTensorPatchesWithSubdivisionWebGL(
-            tensorPatches.map((patch, ind) => ({
-              patch,
-              x: ind % columnCount,
-              y: Math.floor(ind / columnCount),
-            })),
-            colorModel,
-            subdivisionCount,
-            useSimpleUV,
-            context
-          );
-        } else {
-          // renderCoonsPatchesWithFFD(coonsPatch, colorModel, context);
-        }
-      } else {
-        if (patchType === 'tensor') {
-          renderTensorPatchesWithFFDWebGL(tensorPatches, colorModel, context);
-        } else {
-          // renderCoonsPatceshWithSubdivision(
-          //   coonsPatch,
-          //   colorModel,
-          //   subdivisionCount,
-          //   context
-          // );
-        }
-      }
-    }
+    const patches = getCoonsPatchFromRowsAndColumns(
+      columns,
+      rows,
+      convertedColors,
+      columnCount,
+      rowCount
+    );
+    const coonsPatches = patches.map((patch) => coordinatesToPixels(patch));
+    const tensorPatches = coonsPatches.map((coonsPatch) =>
+      coonsToTensorPatch(coonsPatch)
+    );
+    renderTensorPatchesWithSubdivisionWebGL(
+      tensorPatches.map((patch, ind) => ({
+        patch,
+        x: ind % columnCount,
+        y: Math.floor(ind / columnCount),
+      })),
+      colorModel,
+      subdivisionCount,
+      useSimpleUV,
+      context
+    );
 
     renderControlPoints(
       context,
@@ -366,13 +288,10 @@ function App() {
     rows,
     columnCount,
     rowCount,
-    patchType,
-    rasterizerAlgorithm,
     colorModel,
     coordinatesToPixels,
     subdivisionCount,
     convertedColors,
-    renderContext,
     showControlPoints,
     showBezierCurves,
     useSimpleUV,
@@ -552,60 +471,11 @@ function App() {
         }}
       >
         <fieldset>
-          <legend>Select patch type</legend>
-          <label>
-            <input
-              type="radio"
-              value="coons"
-              id="coons"
-              name="patchType"
-              checked={patchType === 'coons'}
-              onChange={() => setPatchType('coons')}
-            />{' '}
-            Coons patch
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="tensor"
-              id="tensor"
-              name="patchType"
-              checked={patchType === 'tensor'}
-              onChange={() => setPatchType('tensor')}
-            />{' '}
-            Tensor-product patch
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend>Select rasterizer algorithm</legend>
-          <label>
-            <input
-              type="radio"
-              value="ffd"
-              id="ffd"
-              name="rasterizerAlgorithm"
-              checked={rasterizerAlgorithm === 'ffd'}
-              onChange={() => setRasterizerAlgorithm('ffd')}
-            />{' '}
-            Fast-forward differencing
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="subdivision"
-              id="subdivision"
-              name="rasterizerAlgorithm"
-              checked={rasterizerAlgorithm === 'subdivision'}
-              onChange={() => setRasterizerAlgorithm('subdivision')}
-            />{' '}
-            Patch subdivision
-          </label>
+          <legend>Select patch subdivision count</legend>
           <label>
             <input
               style={{ marginInline: '0.5em' }}
               id="subdivision-count"
-              disabled={rasterizerAlgorithm !== 'subdivision'}
               value={subdivisionCount}
               onChange={(event) =>
                 setSubdivisionCount(
@@ -625,7 +495,7 @@ function App() {
         </fieldset>
 
         <fieldset>
-          <legend>Select color space</legend>
+          <legend>Select color model</legend>
           <label>
             <input
               type="radio"
@@ -658,33 +528,6 @@ function App() {
               onChange={() => setColorModel('lcha')}
             />{' '}
             LCH
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend>Select render context</legend>
-          <label>
-            <input
-              type="radio"
-              value="2d"
-              id="2d"
-              name="renderContext"
-              checked={renderContext === '2d'}
-              onChange={() => setRenderContext('2d')}
-            />{' '}
-            2D Canvas
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="webgl2"
-              id="webgl2"
-              name="renderContext"
-              disabled={!window.WebGL2RenderingContext}
-              checked={renderContext === 'webgl2'}
-              onChange={() => setRenderContext('webgl2')}
-            />{' '}
-            WebGL2
           </label>
         </fieldset>
 
@@ -821,22 +664,12 @@ function App() {
           }}
           ref={colorPickerRef}
         />
-        {renderContext === '2d' && (
-          <canvas
-            width={800}
-            height={600}
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-          />
-        )}
-        {renderContext === 'webgl2' && (
-          <canvas
-            width={800}
-            height={600}
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-          />
-        )}
+        <canvas
+          width={800}
+          height={600}
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+        />
       </div>
     </div>
   );

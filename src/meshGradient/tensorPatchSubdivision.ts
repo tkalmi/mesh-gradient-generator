@@ -6,8 +6,7 @@ import {
   Vec2,
   WebGLProgramInfo,
 } from '../types';
-import { bilinearPixelInterpolation, colorToStringFuncs } from './colors';
-import { meanValue, midPoint } from './helpers';
+import { midPoint } from './helpers';
 import { divideCubicBezier } from './patchSubdivision';
 import { initShaderProgram } from './webGL';
 
@@ -78,65 +77,6 @@ function subdivideTensorPatch(patch: TensorPatch<Vec2>) {
     transposeTensorPatch(east)
   );
   return { northWest, northEast, southWest, southEast };
-}
-
-export function renderTensorPatchWithSubdivision2d(
-  tensorPatch: TensorPatch<Color>,
-  colorModel: ColorModel,
-  maxDepth: number,
-  context: CanvasRenderingContext2D
-) {
-  const basePatch: TensorPatch<Vec2> = {
-    ...tensorPatch,
-    tensorValues: {
-      northValue: [0, 0],
-      eastValue: [1, 0],
-      southValue: [1, 1],
-      westValue: [0, 1],
-    },
-  };
-
-  const colorToString = colorToStringFuncs[colorModel];
-
-  // Function to draw the patch uniformly using bilinear interpolation
-  function drawPatchUniform(patch: TensorPatch<Vec2>) {
-    const { curve0, curve3, tensorValues } = patch;
-    const [u, v] = meanValue(Object.values(tensorValues)); // Get mean UV from coonsValues
-
-    const baseColors = tensorPatch.tensorValues;
-    const color = bilinearPixelInterpolation(baseColors, u, v); // Interpolate texture color at UV coordinates
-
-    // Draw the patch
-    const patchPath = new Path2D();
-    patchPath.moveTo(curve0[0][0], curve0[0][1]); // move to starting point
-    patchPath.lineTo(curve3[0][0], curve3[0][1]);
-    patchPath.lineTo(curve3[3][0], curve3[3][1]);
-    patchPath.lineTo(curve0[3][0], curve0[3][1]);
-    patchPath.lineTo(curve0[0][0], curve0[0][1]);
-
-    context.lineWidth = 1;
-    patchPath.closePath();
-    context.fillStyle = colorToString(color);
-    context.strokeStyle = context.fillStyle;
-    context.stroke(patchPath);
-    context.fill(patchPath);
-  }
-
-  const queue: [number, TensorPatch<Vec2>][] = [[maxDepth, basePatch]];
-  while (queue.length > 0) {
-    const [depth, patch] = queue.pop()!;
-    if (depth === 0) {
-      drawPatchUniform(patch);
-    } else {
-      const { northWest, northEast, southWest, southEast } =
-        subdivideTensorPatch(patch);
-
-      queue.push([depth - 1, southEast]);
-      queue.push([depth - 1, southWest]);
-      queue.push([depth - 1, northEast]);
-      queue.push([depth - 1, northWest]);
-    }
-  }
 }
 
 type ProgramInfo = WebGLProgramInfo<

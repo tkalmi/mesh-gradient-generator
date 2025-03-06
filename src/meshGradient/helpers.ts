@@ -58,16 +58,6 @@ function scalePoint(point: Vec2, scalar: number): Vec2 {
 }
 
 /**
- * Get the mean value of a list of points.
- * @param points array of 2D points
- * @returns the mean value of the points
- */
-export function meanValue(points: Vec2[]): Vec2 {
-  const sum = points.reduce(vectorAdd, [0, 0]);
-  return scalePoint(sum, 1 / points.length);
-}
-
-/**
  * Creates a Tensor Patch out of a Coons patch.
  * @param coonsPatch
  * @returns
