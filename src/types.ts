@@ -4,9 +4,9 @@ export type Vec4<T = number> = [T, T, T, T];
 
 export type CubicBezier = Vec4<Vec2>;
 
-export type ColorModel = 'rgba' | 'hsla' | 'lcha';
+export type ColorModel = 'rgba' | 'hsla' | 'oklab';
 
-export type Color = Vec4<number>; // This four-value vector represents any four-value color space color, e.g., RGBA, HSL(A), or LCH(A)
+export type Color = Vec4<number>; // This four-value vector represents any four-value color space color, e.g., RGBA, HSL(A), or Oklab
 
 export type ParametricValues<T> = {
   northValue: T;

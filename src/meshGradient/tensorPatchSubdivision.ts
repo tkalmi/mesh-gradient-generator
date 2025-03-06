@@ -230,46 +230,26 @@ function getFsSource(colorModel: ColorModel, colorCount: number) {
     return vec4(r, g, b, 1.0); // alpha is converted back to [0, 255]
   }
 
-  vec4 lchaToRgba(vec4 lcha) {
-    float L = lcha.x;
-    float C = lcha.y;
-    float H = lcha.z;
+  float gamma(float x) {
+    if (x > 0.0031308) {
+      return 1.055 * pow(x, 1.0 * 0.4166666667) - 0.055;
+    } else {
+      return 12.92 * x;
+    }
+  }
 
-    H = radians(H); // Convert from [0,1] to degrees, then to radians
+  vec4 oklabToRgba(vec4 oklab) {
+    float L = oklab.x;
+    float A = oklab.y;
+    float B = oklab.z;
 
-    // Convert LCH to Lab
-    float a = C * cos(H);
-    float b = C * sin(H);
+    float l = pow(L + 0.3963377774 * A + 0.2158037573 * B, 3.0);
+    float m = pow(L - 0.1055613458 * A - 0.0638541728 * B, 3.0);
+    float s = pow(L - 0.0894841775 * A - 1.291485548 * B, 3.0);
 
-    float one116th = 0.008620689655172414; // 1.0 / 116.0
-    // Convert Lab to XYZ (D65)
-    float Y = (L + 16.0) * one116th;
-    float X = a * 0.002 + Y;
-    float Z = Y - b * 0.005;
-
-    float xPow3 = X * X * X;
-    float yPow3 = Y * Y * Y;
-    float zPow3 = Z * Z * Z;
-
-    // Reverse gamma correction
-    X = 95.047 * ((xPow3 > 0.008856) ? (xPow3) : ((X - 16.0 * one116th) * 0.1284191601386927));
-    Y = 100.000 * ((yPow3 > 0.008856) ? (yPow3) : ((Y - 16.0 * one116th) * 0.1284191601386927));
-    Z = 108.883 * ((zPow3 > 0.008856) ? (zPow3) : ((Z - 16.0 * one116th) * 0.1284191601386927));
-
-    X *= 0.01;
-    Y *= 0.01;
-    Z *= 0.01;
-
-    // Convert XYZ to linear sRGB
-    float r = X *  3.2406 + Y * -1.5372 + Z * -0.4986;
-    float g = X * -0.9689 + Y *  1.8758 + Z *  0.0415;
-    b = X *  0.0557 + Y * -0.2040 + Z *  1.0570;
-
-    // Apply gamma correction (sRGB)
-    float one24th = 0.4166666666666667; // 1.0 / 2.4
-    r = (r > 0.0031308) ? (1.055 * pow(r, one24th) - 0.055) : (12.92 * r);
-    g = (g > 0.0031308) ? (1.055 * pow(g, one24th) - 0.055) : (12.92 * g);
-    b = (b > 0.0031308) ? (1.055 * pow(b, one24th) - 0.055) : (12.92 * b);
+    float r = gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s);
+    float g = gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s);
+    float b = gamma(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s);
 
     // Clamp to valid RGB range
     return clamp(vec4(r, g, b, 1.0), 0.0, 1.0);
@@ -299,8 +279,8 @@ function getFsSource(colorModel: ColorModel, colorCount: number) {
       switch (colorModel) {
         case 'hsla':
           return 'outputColor = hslaToRgba(color);';
-        case 'lcha':
-          return 'outputColor = lchaToRgba(color);';
+        case 'oklab':
+          return 'outputColor = oklabToRgba(color);';
         case 'rgba':
         default:
           return 'outputColor = color * 0.00392156862745098; // Divide by 255';

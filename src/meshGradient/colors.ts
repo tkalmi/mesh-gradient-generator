@@ -63,90 +63,29 @@ export function rgbaToHsla(rgba: Color): Color {
   return [h * 360, s * 100, l * 100, rgba[3]];
 }
 
-// https://gist.github.com/avisek/eadfbe7a7a169b1001a2d3affc21052e
-export function rgbaToLcha(rgba: Color): Color {
+function gammaInv(x: number): number {
+  if (x > 0.04045) {
+    x = Math.pow((x + 0.055) / 1.055, 2.4);
+  } else {
+    x = x / 12.92;
+  }
+  return x;
+}
+
+// https://github.com/beenotung/oklab.ts/blob/main/src/oklab.ts
+export function rgbaToOklab(rgba: Color): Color {
   // Convert RGB to XYZ
-  const xyz = (() => {
-    let r = rgba[0] / 255;
-    let g = rgba[1] / 255;
-    let b = rgba[2] / 255;
+  const r = gammaInv(rgba[0] / 255);
+  const g = gammaInv(rgba[1] / 255);
+  const b = gammaInv(rgba[2] / 255);
 
-    if (r > 0.04045) {
-      r = Math.pow((r + 0.055) / 1.055, 2.4);
-    } else {
-      r = r / 12.92;
-    }
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
 
-    if (g > 0.04045) {
-      g = Math.pow((g + 0.055) / 1.055, 2.4);
-    } else {
-      g = g / 12.92;
-    }
+  const oklabL = l * +0.2104542553 + m * +0.793617785 + s * -0.0040720468;
+  const oklabA = l * +1.9779984951 + m * -2.428592205 + s * +0.4505937099;
+  const oklabB = l * +0.0259040371 + m * +0.7827717662 + s * -0.808675766;
 
-    if (b > 0.04045) {
-      b = Math.pow((b + 0.055) / 1.055, 2.4);
-    } else {
-      b = b / 12.92;
-    }
-
-    r *= 100;
-    g *= 100;
-    b *= 100;
-
-    // Observer = 2°, Illuminant = D65
-    const x = r * 0.4124 + g * 0.3576 + b * 0.1805;
-    const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    const z = r * 0.0193 + g * 0.1192 + b * 0.9505;
-
-    return [x, y, z];
-  })();
-
-  // Convert XYZ to Lab
-  const lab = (() => {
-    let [x, y, z] = xyz;
-    x /= 95.047;
-    y /= 100.0;
-    z /= 108.883;
-
-    if (x > 0.008856) {
-      x = Math.pow(x, 0.333333333);
-    } else {
-      x = 7.787 * x + 0.137931034;
-    }
-
-    if (y > 0.008856) {
-      y = Math.pow(y, 0.333333333);
-    } else {
-      y = 7.787 * y + 0.137931034;
-    }
-
-    if (z > 0.008856) {
-      z = Math.pow(z, 0.333333333);
-    } else {
-      z = 7.787 * z + 0.137931034;
-    }
-
-    const l = 116 * y - 16;
-    const a = 500 * (x - y);
-    const b = 200 * (y - z);
-
-    return [l, a, b];
-  })();
-
-  // Convert Lab to LCH
-  const lch = (() => {
-    const [l, a, b] = lab;
-    const c = Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
-
-    let h = Math.atan2(b, a); //Quadrant by signs
-    if (h > 0) {
-      h = (h / Math.PI) * 180;
-    } else {
-      h = 360 - (Math.abs(h) / Math.PI) * 180;
-    }
-
-    return [l, c, h];
-  })();
-
-  return [...lch, rgba[3]] as Color;
+  return [oklabL, oklabA, oklabB, rgba[3]];
 }

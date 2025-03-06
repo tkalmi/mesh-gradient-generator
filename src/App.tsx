@@ -12,7 +12,7 @@ import {
   hexToRgb,
   rgbaToHex,
   rgbaToHsla,
-  rgbaToLcha,
+  rgbaToOklab,
 } from './meshGradient/colors';
 import { renderTensorPatchesWithSubdivisionWebGL } from './meshGradient/tensorPatchSubdivision';
 import { renderControlPoints } from './meshGradient/controlPoints';
@@ -157,11 +157,11 @@ function App() {
   const [points, setPoints] = useState<Vec2[]>(getNewPoints(1, 1));
 
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
-  const [subdivisionCount, setSubdivisionCount] = useState(0);
+  const [subdivisionCount, setSubdivisionCount] = useState(4);
   const [showBezierCurves, setShowBezierCurves] = useState(false);
   const [showControlPoints, setShowControlPoints] = useState(true);
-  const [rowCount, setRowCount] = useState(1);
-  const [columnCount, setColumnCount] = useState(1);
+  const [rowCount, setRowCount] = useState(2);
+  const [columnCount, setColumnCount] = useState(2);
   // In RGBA, two for each row
   const [rawColors, setColors] = useState<Color[]>(
     getColors(rowCount, columnCount)
@@ -191,8 +191,8 @@ function App() {
     switch (colorModel) {
       case 'hsla':
         return colors.map((color) => rgbaToHsla(color));
-      case 'lcha':
-        return colors.map((color) => rgbaToLcha(color));
+      case 'oklab':
+        return colors.map((color) => rgbaToOklab(color));
       case 'rgba':
       default:
         return colors;
@@ -510,6 +510,17 @@ function App() {
           <label>
             <input
               type="radio"
+              value="oklab"
+              id="oklab"
+              name="colorModel"
+              checked={colorModel === 'oklab'}
+              onChange={() => setColorModel('oklab')}
+            />{' '}
+            Oklab
+          </label>
+          <label>
+            <input
+              type="radio"
               value="hsla"
               id="hsla"
               name="colorModel"
@@ -517,17 +528,6 @@ function App() {
               onChange={() => setColorModel('hsla')}
             />{' '}
             HSL
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="lcha"
-              id="lcha"
-              name="colorModel"
-              checked={colorModel === 'lcha'}
-              onChange={() => setColorModel('lcha')}
-            />{' '}
-            LCH
           </label>
         </fieldset>
 
