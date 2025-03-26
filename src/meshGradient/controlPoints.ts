@@ -3,90 +3,6 @@ import { CubicBezier } from '../types';
 import { convertXToCanvasX, convertYToCanvasY } from './helpers';
 import { initShaderProgram } from './webGL';
 
-export function renderControlPoints2d(
-  context: CanvasRenderingContext2D,
-  columns: CubicBezier[],
-  rows: CubicBezier[],
-  showControlPoints: boolean,
-  showBezierCurves: boolean
-) {
-  const width = context.canvas.width;
-  const height = context.canvas.height;
-  context.fillStyle = 'white';
-  context.strokeStyle = '#5a5a5a';
-  context.lineWidth = 2;
-
-  for (const column of columns) {
-    context.strokeStyle = '#5a5a5a';
-    for (const point of column) {
-      if (showControlPoints) {
-        context.beginPath();
-        context.arc(
-          convertXToCanvasX(point[0], width),
-          convertYToCanvasY(point[1], height),
-          CONTROL_POINT_RADIUS,
-          0,
-          2 * Math.PI
-        );
-        context.stroke();
-        context.fill();
-      }
-    }
-
-    if (showBezierCurves) {
-      context.strokeStyle = 'white';
-      context.moveTo(
-        convertXToCanvasX(column[0][0], width),
-        convertYToCanvasY(column[0][1], height)
-      );
-      context.bezierCurveTo(
-        convertXToCanvasX(column[1][0], width),
-        convertYToCanvasY(column[1][1], height),
-        convertXToCanvasX(column[2][0], width),
-        convertYToCanvasY(column[2][1], height),
-        convertXToCanvasX(column[3][0], width),
-        convertYToCanvasY(column[3][1], height)
-      );
-      context.stroke();
-    }
-  }
-
-  for (const row of rows) {
-    context.strokeStyle = '#5a5a5a';
-    for (const point of row) {
-      if (showControlPoints) {
-        context.beginPath();
-        context.arc(
-          convertXToCanvasX(point[0], width),
-          convertYToCanvasY(point[1], height),
-          CONTROL_POINT_RADIUS,
-          0,
-          2 * Math.PI
-        );
-        context.stroke();
-        context.fill();
-      }
-    }
-
-    if (showBezierCurves) {
-      context.strokeStyle = 'white';
-      context.moveTo(
-        convertXToCanvasX(row[0][0], width),
-        convertYToCanvasY(row[0][1], height)
-      );
-      context.bezierCurveTo(
-        convertXToCanvasX(row[1][0], width),
-        convertYToCanvasY(row[1][1], height),
-        convertXToCanvasX(row[2][0], width),
-        convertYToCanvasY(row[2][1], height),
-        convertXToCanvasX(row[3][0], width),
-        convertYToCanvasY(row[3][1], height)
-      );
-      context.stroke();
-    }
-  }
-}
-
 type ProgramInfo = {
   program: WebGLShader;
   attribLocations: {
@@ -105,13 +21,8 @@ const CENTER_LOCATION = 1;
 export function renderControlPointsWebGL(
   gl: WebGL2RenderingContext,
   columns: CubicBezier[],
-  rows: CubicBezier[],
-  showControlPoints: boolean,
-  showBezierCurves: boolean
+  rows: CubicBezier[]
 ) {
-  if (!showControlPoints) {
-    return;
-  }
   const width = gl.canvas.width;
   const height = gl.canvas.height;
   const centerVecs = rows.flat(1).concat(columns.flat(1));
@@ -299,6 +210,119 @@ export function renderControlPointsWebGL(
   drawCtrlPoints(gl, buffers, programInfo);
 }
 
+export function renderBezierCurvesWebGL(
+  gl: WebGL2RenderingContext,
+  columns: CubicBezier[],
+  rows: CubicBezier[]
+) {
+  const vsSource = /*glsl*/ `#version 300 es
+    precision highp float;
+    layout(location = 0) in float a_t;
+    layout(location = 1) in vec2 a_p0;
+    layout(location = 2) in vec2 a_p1;
+    layout(location = 3) in vec2 a_p2;
+    layout(location = 4) in vec2 a_p3;
+
+    out vec2 v_position; // Pass position to fragment shader for debugging
+
+    void main() {
+      float u = 1.0 - a_t;
+      float tt = a_t * a_t;
+      float uu = u * u;
+      float uuu = uu * u;
+      float ttt = tt * a_t;
+
+      vec2 position = uuu * a_p0 + 3.0 * uu * a_t * a_p1 + 3.0 * u * tt * a_p2 + ttt * a_p3;
+
+      gl_Position = vec4(position.x, -position.y, 0.0, 1.0);
+      v_position = position;
+    }`;
+
+  const fsSource = /*glsl*/ `#version 300 es
+    precision highp float;
+    out vec4 outColor;
+    in vec2 v_position; // Receive interpolated position
+
+    void main() {
+        outColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }`;
+
+  const program = initShaderProgram(gl, vsSource, fsSource);
+  if (!program) {
+    console.error('Shader program initialization failed.');
+    return;
+  }
+  gl.useProgram(program);
+
+  const width = gl.canvas.width;
+  const height = gl.canvas.height;
+  const segmentsPerLine = 100;
+
+  const lines = columns.concat(rows);
+  const totalVertices = lines.length * (segmentsPerLine + 1);
+  const vertexData = new Float32Array(totalVertices * 9); // Each vertex: t + p0..p3 (x,y)
+
+  let index = 0;
+  for (const line of lines) {
+    // Transform control points to clip space
+    const x0 = (convertXToCanvasX(line[0][0], width) / width) * 2 - 1;
+    const y0 = (convertXToCanvasX(line[0][1], height) / height) * 2 - 1; // Corrected Y
+    const x1 = (convertXToCanvasX(line[1][0], width) / width) * 2 - 1;
+    const y1 = (convertXToCanvasX(line[1][1], height) / height) * 2 - 1; // Corrected Y
+    const x2 = (convertXToCanvasX(line[2][0], width) / width) * 2 - 1;
+    const y2 = (convertXToCanvasX(line[2][1], height) / height) * 2 - 1; // Corrected Y
+    const x3 = (convertXToCanvasX(line[3][0], width) / width) * 2 - 1;
+    const y3 = (convertXToCanvasX(line[3][1], height) / height) * 2 - 1; // Corrected Y
+
+    for (let i = 0; i <= segmentsPerLine; i++) {
+      const t = i / segmentsPerLine;
+      vertexData.set([t, x0, y0, x1, y1, x2, y2, x3, y3], index);
+      index += 9;
+    }
+  }
+
+  const vertexBuffer = gl.createBuffer();
+  if (!vertexBuffer) {
+    console.error('Failed to create vertex buffer');
+    return;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
+
+  const tLocation = gl.getAttribLocation(program, 'a_t');
+  const p0Location = gl.getAttribLocation(program, 'a_p0');
+  const p1Location = gl.getAttribLocation(program, 'a_p1');
+  const p2Location = gl.getAttribLocation(program, 'a_p2');
+  const p3Location = gl.getAttribLocation(program, 'a_p3');
+
+  gl.enableVertexAttribArray(tLocation);
+  gl.vertexAttribPointer(tLocation, 1, gl.FLOAT, false, 9 * 4, 0);
+
+  gl.enableVertexAttribArray(p0Location);
+  gl.vertexAttribPointer(p0Location, 2, gl.FLOAT, false, 9 * 4, 1 * 4);
+
+  gl.enableVertexAttribArray(p1Location);
+  gl.vertexAttribPointer(p1Location, 2, gl.FLOAT, false, 9 * 4, 3 * 4);
+
+  gl.enableVertexAttribArray(p2Location);
+  gl.vertexAttribPointer(p2Location, 2, gl.FLOAT, false, 9 * 4, 5 * 4);
+
+  gl.enableVertexAttribArray(p3Location);
+  gl.vertexAttribPointer(p3Location, 2, gl.FLOAT, false, 9 * 4, 7 * 4);
+
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    gl.drawArrays(gl.LINE_STRIP, offset, segmentsPerLine + 1);
+    offset += segmentsPerLine + 1;
+  }
+
+  // Check for errors
+  const error = gl.getError();
+  if (error !== gl.NO_ERROR) {
+    console.error('WebGL Error:', error);
+  }
+}
+
 /**
  * Render control points in given context, either with WebGL or 2D. The first and last values of each column should correspond to start/end of a row, and vice versa.
  * @param context
@@ -306,29 +330,16 @@ export function renderControlPointsWebGL(
  * @param rows rows formed by control points
  */
 export function renderControlPoints(
-  context: CanvasRenderingContext2D | WebGL2RenderingContext,
+  context: WebGL2RenderingContext,
   columns: CubicBezier[],
   rows: CubicBezier[],
   showControlPoints: boolean,
   showBezierCurves: boolean
 ) {
-  if (context instanceof WebGL2RenderingContext) {
-    renderControlPointsWebGL(
-      context,
-      columns,
-      rows,
-      showControlPoints,
-      showBezierCurves
-    );
-  } else if (context instanceof CanvasRenderingContext2D) {
-    renderControlPoints2d(
-      context,
-      columns,
-      rows,
-      showControlPoints,
-      showBezierCurves
-    );
-  } else {
-    throw Error('Unknown render context mode selected.');
+  if (showControlPoints) {
+    renderControlPointsWebGL(context, columns, rows);
+  }
+  if (showBezierCurves) {
+    renderBezierCurvesWebGL(context, columns, rows);
   }
 }

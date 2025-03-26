@@ -298,7 +298,6 @@ function getShaderProgram(
   colorCount: number,
   useSimpleUV: boolean
 ) {
-  // TODO: Take color model into account
   return initShaderProgram(
     gl,
     getVsSource(useSimpleUV),

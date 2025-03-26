@@ -158,7 +158,7 @@ function App() {
 
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(4);
-  const [showBezierCurves, setShowBezierCurves] = useState(false);
+  const [showBezierCurves, setShowBezierCurves] = useState(true);
   const [showControlPoints, setShowControlPoints] = useState(true);
   const [rowCount, setRowCount] = useState(2);
   const [columnCount, setColumnCount] = useState(2);
@@ -212,6 +212,7 @@ function App() {
     });
   }, [rowCount, columnCount]);
 
+  // TODO: Skip the conversion -- if we pass values [0, 100] to the shader, we can convert them there using a simple multiplication
   const coordinatesToPixels = useCallback(
     (patch: CoonsPatch<Color>): CoonsPatch<Color> => {
       const { height, width } = canvasDimensionsRef.current;
