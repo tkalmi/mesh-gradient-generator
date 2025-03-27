@@ -152,6 +152,14 @@ function App() {
     height: number;
     width: number;
   }>({ left: 0, top: 0, height: 600, width: 800 });
+
+  const cssCanvasDimensionsRef = useRef<{
+    left: number;
+    top: number;
+    height: number;
+    width: number;
+  }>({ left: 0, top: 0, height: 600, width: 800 });
+
   const colorPickerRef = useRef<HTMLInputElement>(null);
 
   const [points, setPoints] = useState<Vec2[]>(getNewPoints(1, 1));
@@ -215,24 +223,26 @@ function App() {
   // TODO: Skip the conversion -- if we pass values [0, 100] to the shader, we can convert them there using a simple multiplication
   const coordinatesToPixels = useCallback(
     (patch: CoonsPatch<Color>): CoonsPatch<Color> => {
-      const { height, width } = canvasDimensionsRef.current;
+      const { height, width } = cssCanvasDimensionsRef.current;
+      const dpr = window.devicePixelRatio || 1;
+
       return {
         ...patch,
         north: patch.north.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
+          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
         ]) as CubicBezier,
         south: patch.south.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
+          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
         ]) as CubicBezier,
         east: patch.east.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
+          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
         ]) as CubicBezier,
         west: patch.west.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top,
+          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
+          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
         ]) as CubicBezier,
       };
     },
@@ -245,7 +255,9 @@ function App() {
       const context = canvas.getContext('webgl2', {
         alpha: true,
         antialias: true,
+        preserveDrawingBuffer: true,
       })!;
+
       context.enable(context.BLEND);
       context.blendFunc(context.SRC_ALPHA, context.ONE_MINUS_SRC_ALPHA);
       context.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -302,15 +314,61 @@ function App() {
   ]);
 
   useEffect(() => {
-    const setCanvasDimensionsRef = () => {
-      canvasDimensionsRef.current = canvasRef.current!.getBoundingClientRect();
+    if (canvasRef.current) {
+      const currentDevicePixelRatio = window.devicePixelRatio || 1;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+
+      cssCanvasDimensionsRef.current = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+
+      canvasRef.current.width = rect.width * currentDevicePixelRatio;
+      canvasRef.current.height = rect.height * currentDevicePixelRatio;
+
+      canvasRef.current.style.width = `${rect.width}px`;
+      canvasRef.current.style.height = `${rect.height}px`;
+
+      canvasDimensionsRef.current = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width * currentDevicePixelRatio,
+        height: rect.height * currentDevicePixelRatio,
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const currentDevicePixelRatio = window.devicePixelRatio || 1;
+
+        cssCanvasDimensionsRef.current = {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+
+        canvasDimensionsRef.current = {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width * currentDevicePixelRatio,
+          height: rect.height * currentDevicePixelRatio,
+        };
+
+        canvasRef.current.width = rect.width * currentDevicePixelRatio;
+        canvasRef.current.height = rect.height * currentDevicePixelRatio;
+      }
     };
 
-    setCanvasDimensionsRef();
-
-    window.addEventListener('resize', setCanvasDimensionsRef);
+    window.addEventListener('resize', handleResize);
     return () => {
-      window.removeEventListener('resize', setCanvasDimensionsRef);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -319,7 +377,8 @@ function App() {
 
   const getHoveredPointIndex = useCallback(
     (event: React.MouseEvent<HTMLElement>): number => {
-      const { left, top, width, height } = canvasDimensionsRef.current;
+      const { left, top } = cssCanvasDimensionsRef.current;
+      const { width, height } = cssCanvasDimensionsRef.current;
       const x = event.clientX - left;
       const y = event.clientY - top;
       const index = points.findIndex((point) => {
@@ -367,7 +426,8 @@ function App() {
         return;
       }
       container.style.cursor = 'grabbing';
-      const { left, top, height, width } = canvasDimensionsRef.current;
+      const { left, top } = cssCanvasDimensionsRef.current;
+      const { width, height } = cssCanvasDimensionsRef.current;
       const x =
         ((Math.min(
           Math.max(CONTROL_POINT_RADIUS, event.clientX - left),
@@ -669,8 +729,7 @@ function App() {
           ref={colorPickerRef}
         />
         <canvas
-          width={800}
-          height={600}
+          style={{ width: 800, height: 600 }}
           ref={canvasRef}
           onMouseDown={handleMouseDown}
         />

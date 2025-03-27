@@ -161,13 +161,11 @@ function getVsSource(useSimpleUV: boolean) {
   }
 
   void main() {
-    vec2 scaledPosition = a_position.xy / u_resolution; // transform to [0, 1] space
-    vec2 zeroToTwo = scaledPosition * 2.0;
-    vec2 clipSpacePosition = zeroToTwo - 1.0; // transform to [-1, 1] clip space
-    gl_Position = vec4(clipSpacePosition.x, -clipSpacePosition.y, 0.0, 1.0);
+    // Convert position to clip space (-1, 1) making sure to scale properly
+    vec2 clipSpace = (a_position / u_resolution) * 2.0 - 1.0;
+    gl_Position = vec4(clipSpace.x, -clipSpace.y, 0.0, 1.0);
 
     v_position = gl_Position;
-
     v_north_color_location = a_north_color_location;
 
     ${useSimpleUV ? 'v_uv = getUVSimple();' : 'v_uv = getUV(a_position.xy);'}
@@ -745,6 +743,7 @@ export function renderTensorPatchesWithSubdivisionWebGL(
 
     gl.useProgram(programInfo.program);
 
+    // Set the resolution to the actual canvas dimensions in pixels
     gl.uniform2f(
       programInfo.uniformLocations.u_resolution,
       gl.canvas.width,

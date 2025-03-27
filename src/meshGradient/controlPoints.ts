@@ -78,7 +78,7 @@ export function renderControlPointsWebGL(
 
     void main() {
       float dist = length(v_uv); // Distance from center (normalized)
-      float alpha = smoothstep(1.0, 0.8, dist); // Smooth antialiasing
+      float alpha = smoothstep(1.0, 0.9, dist); // Smooth antialiasing
 
       if (dist > 1.0) discard; // Remove pixels outside the circle
 
@@ -161,8 +161,11 @@ export function renderBezierCurvesWebGL(
 
   const width = gl.canvas.width;
   const height = gl.canvas.height;
-  const segmentsPerLine = 100;
-  const lineWidth = 0.004; // Thickness in normalized coordinates
+  const segmentsPerLine = 200; // More segments for smoother curves
+
+  // Use a width that looks good with anti-aliasing
+  const pixelLineWidth = 1.5; // Between 1-2 pixels for balance
+  const lineWidth = (pixelLineWidth / width) * 2;
 
   const lines = columns.concat(rows);
 
@@ -200,7 +203,7 @@ export function renderBezierCurvesWebGL(
   for (const line of lines) {
     const vertexData: number[] = [];
 
-    // Convert control points to clip space
+    // Use normal conversion without rounding for smoother curves
     const p0 = [
       (convertXToCanvasX(line[0][0], width) / width) * 2 - 1,
       (-convertYToCanvasY(line[0][1], height) / height) * 2 + 1,
