@@ -376,20 +376,31 @@ function App() {
   const draggedPointIndexRef = useRef<number | null>(null);
 
   const getHoveredPointIndex = useCallback(
-    (event: React.MouseEvent<HTMLElement>): number => {
+    (
+      event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
+    ): number => {
       const { left, top } = cssCanvasDimensionsRef.current;
       const { width, height } = cssCanvasDimensionsRef.current;
-      const x = event.clientX - left;
-      const y = event.clientY - top;
+
+      const x =
+        'changedTouches' in event
+          ? (event as React.TouchEvent<HTMLElement>).changedTouches[0].clientX
+          : (event as React.MouseEvent<HTMLElement>).clientX - left;
+      const y =
+        'changedTouches' in event
+          ? (event as React.TouchEvent<HTMLElement>).changedTouches[0].clientY
+          : (event as React.MouseEvent<HTMLElement>).clientY - top;
+      const distanceThreshold =
+        'changedTouches' in event ? 50 : CONTROL_POINT_RADIUS;
       const index = points.findIndex((point) => {
         const [px, py] = point;
         return (
           Math.abs(
             px * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left - x
-          ) <= CONTROL_POINT_RADIUS &&
+          ) <= distanceThreshold &&
           Math.abs(
             py * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top - y
-          ) <= CONTROL_POINT_RADIUS
+          ) <= distanceThreshold
         );
       });
 
@@ -398,8 +409,12 @@ function App() {
     [points]
   );
 
-  const handleMouseDown = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCursorDown = useCallback(
+    (
+      event:
+        | React.MouseEvent<HTMLCanvasElement>
+        | React.TouchEvent<HTMLCanvasElement>
+    ) => {
       lastMouseDownTimestampRef.current = performance.now();
 
       if (
@@ -414,8 +429,10 @@ function App() {
     [getHoveredPointIndex, activeColorIndex]
   );
 
-  const handleMouseMove = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleCursorMove = useCallback(
+    (
+      event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+    ) => {
       const container = containerRef.current as HTMLDivElement;
       if (draggedPointIndexRef.current === null) {
         if (getHoveredPointIndex(event) >= 0) {
@@ -428,9 +445,13 @@ function App() {
       container.style.cursor = 'grabbing';
       const { left, top } = cssCanvasDimensionsRef.current;
       const { width, height } = cssCanvasDimensionsRef.current;
+      const { clientX, clientY } =
+        'changedTouches' in event
+          ? (event as React.TouchEvent<HTMLDivElement>).changedTouches[0]
+          : (event as React.MouseEvent<HTMLDivElement>);
       const x =
         ((Math.min(
-          Math.max(CONTROL_POINT_RADIUS, event.clientX - left),
+          Math.max(CONTROL_POINT_RADIUS, clientX - left),
           width - CONTROL_POINT_RADIUS
         ) -
           MARGIN.left) /
@@ -439,7 +460,7 @@ function App() {
 
       const y =
         ((Math.min(
-          Math.max(CONTROL_POINT_RADIUS, event.clientY - top),
+          Math.max(CONTROL_POINT_RADIUS, clientY - top),
           height - CONTROL_POINT_RADIUS
         ) -
           MARGIN.top) /
@@ -455,8 +476,10 @@ function App() {
     [getHoveredPointIndex]
   );
 
-  const handleMouseUp = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleCursorUp = useCallback(
+    (
+      event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+    ) => {
       function getControlPointColorIndex(
         pointIndex: number | null
       ): number | null {
@@ -519,16 +542,7 @@ function App() {
   ); */
 
   return (
-    <div
-      className="main-container"
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        gap: '2rem',
-        minWidth: '100vw',
-        justifyContent: 'center',
-      }}
-    >
+    <div className="main-container">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -693,8 +707,10 @@ function App() {
       <div
         style={{ width: 800, height: 600, position: 'relative' }}
         className="hover-container"
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onTouchMove={handleCursorMove}
+        onTouchEnd={handleCursorUp}
+        onMouseMove={handleCursorMove}
+        onMouseUp={handleCursorUp}
         ref={containerRef}
       >
         <input
@@ -731,7 +747,8 @@ function App() {
         <canvas
           style={{ width: 800, height: 600 }}
           ref={canvasRef}
-          onMouseDown={handleMouseDown}
+          onMouseDown={handleCursorDown}
+          onTouchStart={handleCursorDown}
         />
       </div>
     </div>
