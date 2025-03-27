@@ -229,20 +229,20 @@ function App() {
       return {
         ...patch,
         north: patch.north.map(([x, y]) => [
-          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
-          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
+          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
+          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
         ]) as CubicBezier,
         south: patch.south.map(([x, y]) => [
-          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
-          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
+          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
+          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
         ]) as CubicBezier,
         east: patch.east.map(([x, y]) => [
-          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
-          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
+          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
+          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
         ]) as CubicBezier,
         west: patch.west.map(([x, y]) => [
-          (x * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left) * dpr,
-          (y * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top) * dpr,
+          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
+          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
         ]) as CubicBezier,
       };
     },
