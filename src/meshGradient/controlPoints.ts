@@ -161,12 +161,12 @@ export function renderBezierCurvesWebGL(
 
   const width = gl.canvas.width;
   const height = gl.canvas.height;
-  const segmentsPerLine = 200; // More segments for smoother curves
+  const segmentsPerLine = 300; // Increased for smoother curves
 
-  // Use a width that looks good with anti-aliasing
-  const pixelLineWidth = 1.5; // Between 1-2 pixels for balance
-  const lineWidth = (pixelLineWidth / width) * 2;
+  // Slightly increase line width to visually close any small gaps
+  const pixelLineWidth = 4.5; // Increased from previous value
 
+  // Lines in WebGL are drawn in normalized device coordinates
   const lines = columns.concat(rows);
 
   function bezier(
@@ -194,16 +194,20 @@ export function renderBezierCurvesWebGL(
 
   function computeNormal(p1: number[], p2: number[]) {
     const tangent = [p2[0] - p1[0], p2[1] - p1[1]];
-    const normal = normalize([-tangent[1], tangent[0]]); // Rotate by 90 degrees
-    return normal;
+    return normalize([-tangent[1], tangent[0]]);
   }
 
   const positionLocation = gl.getAttribLocation(program, 'a_position');
 
+  // Enable blending for smoother line rendering
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
   for (const line of lines) {
     const vertexData: number[] = [];
 
-    // Use normal conversion without rounding for smoother curves
+    // Ensure exact coordinate conversion without rounding errors
+    // We use the same exact conversion as used for the tensor patch vertices
     const p0 = [
       (convertXToCanvasX(line[0][0], width) / width) * 2 - 1,
       (-convertYToCanvasY(line[0][1], height) / height) * 2 + 1,
@@ -223,20 +227,25 @@ export function renderBezierCurvesWebGL(
 
     let prevPoint = bezier(0, p0, p1, p2, p3);
 
-    for (let i = 1; i <= segmentsPerLine; i++) {
+    // Start with t = 0 to ensure we capture the exact endpoints
+    for (let i = 0; i <= segmentsPerLine; i++) {
       const t = i / segmentsPerLine;
       const point = bezier(t, p0, p1, p2, p3);
+
+      // Get the normal direction
       const normal = computeNormal(prevPoint, point);
 
-      // Offset for thickness
-      const left = [
-        point[0] + normal[0] * lineWidth,
-        point[1] + normal[1] * lineWidth,
-      ];
-      const right = [
-        point[0] - normal[0] * lineWidth,
-        point[1] - normal[1] * lineWidth,
-      ];
+      // Proper width calculation accounting for aspect ratio
+      const xWidth = pixelLineWidth / width;
+      const yWidth = pixelLineWidth / height;
+
+      // Create properly scaled normals
+      const scaledNormalX = normal[0] * xWidth;
+      const scaledNormalY = normal[1] * yWidth;
+
+      // Create the line vertices with proper thickness
+      const left = [point[0] + scaledNormalX, point[1] + scaledNormalY];
+      const right = [point[0] - scaledNormalX, point[1] - scaledNormalY];
 
       vertexData.push(...left, ...right);
       prevPoint = point;
