@@ -217,34 +217,18 @@ export function renderBezierCurvesWebGL(
 ) {
   const vsSource = /*glsl*/ `#version 300 es
     precision highp float;
-    layout(location = 0) in float a_t;
-    layout(location = 1) in vec2 a_p0;
-    layout(location = 2) in vec2 a_p1;
-    layout(location = 3) in vec2 a_p2;
-    layout(location = 4) in vec2 a_p3;
-
-    out vec2 v_position; // Pass position to fragment shader for debugging
+    layout(location = 0) in vec2 a_position;
 
     void main() {
-      float u = 1.0 - a_t;
-      float tt = a_t * a_t;
-      float uu = u * u;
-      float uuu = uu * u;
-      float ttt = tt * a_t;
-
-      vec2 position = uuu * a_p0 + 3.0 * uu * a_t * a_p1 + 3.0 * u * tt * a_p2 + ttt * a_p3;
-
-      gl_Position = vec4(position.x, -position.y, 0.0, 1.0);
-      v_position = position;
+      gl_Position = vec4(a_position, 0.0, 1.0);
     }`;
 
   const fsSource = /*glsl*/ `#version 300 es
     precision highp float;
     out vec4 outColor;
-    in vec2 v_position; // Receive interpolated position
 
     void main() {
-        outColor = vec4(1.0, 1.0, 1.0, 1.0);
+        outColor = vec4(1.0, 1.0, 1.0, 1.0); // White color
     }`;
 
   const program = initShaderProgram(gl, vsSource, fsSource);
@@ -257,69 +241,100 @@ export function renderBezierCurvesWebGL(
   const width = gl.canvas.width;
   const height = gl.canvas.height;
   const segmentsPerLine = 100;
+  const lineWidth = 0.004; // Thickness in normalized coordinates
 
   const lines = columns.concat(rows);
-  const totalVertices = lines.length * (segmentsPerLine + 1);
-  const vertexData = new Float32Array(totalVertices * 9); // Each vertex: t + p0..p3 (x,y)
 
-  let index = 0;
+  function bezier(
+    t: number,
+    p0: number[],
+    p1: number[],
+    p2: number[],
+    p3: number[]
+  ) {
+    const u = 1 - t;
+    const uu = u * u;
+    const uuu = uu * u;
+    const tt = t * t;
+    const ttt = tt * t;
+    return [
+      uuu * p0[0] + 3 * uu * t * p1[0] + 3 * u * tt * p2[0] + ttt * p3[0],
+      uuu * p0[1] + 3 * uu * t * p1[1] + 3 * u * tt * p2[1] + ttt * p3[1],
+    ];
+  }
+
+  function normalize(v: number[]) {
+    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+    return len > 0 ? [v[0] / len, v[1] / len] : [0, 0];
+  }
+
+  function computeNormal(p1: number[], p2: number[]) {
+    const tangent = [p2[0] - p1[0], p2[1] - p1[1]];
+    const normal = normalize([-tangent[1], tangent[0]]); // Rotate by 90 degrees
+    return normal;
+  }
+
+  const positionLocation = gl.getAttribLocation(program, 'a_position');
+
   for (const line of lines) {
-    // Transform control points to clip space
-    const x0 = (convertXToCanvasX(line[0][0], width) / width) * 2 - 1;
-    const y0 = (convertXToCanvasX(line[0][1], height) / height) * 2 - 1; // Corrected Y
-    const x1 = (convertXToCanvasX(line[1][0], width) / width) * 2 - 1;
-    const y1 = (convertXToCanvasX(line[1][1], height) / height) * 2 - 1; // Corrected Y
-    const x2 = (convertXToCanvasX(line[2][0], width) / width) * 2 - 1;
-    const y2 = (convertXToCanvasX(line[2][1], height) / height) * 2 - 1; // Corrected Y
-    const x3 = (convertXToCanvasX(line[3][0], width) / width) * 2 - 1;
-    const y3 = (convertXToCanvasX(line[3][1], height) / height) * 2 - 1; // Corrected Y
+    const vertexData: number[] = [];
 
-    for (let i = 0; i <= segmentsPerLine; i++) {
+    // Convert control points to clip space
+    const p0 = [
+      (convertXToCanvasX(line[0][0], width) / width) * 2 - 1,
+      (-convertXToCanvasX(line[0][1], height) / height) * 2 + 1,
+    ];
+    const p1 = [
+      (convertXToCanvasX(line[1][0], width) / width) * 2 - 1,
+      (-convertXToCanvasX(line[1][1], height) / height) * 2 + 1,
+    ];
+    const p2 = [
+      (convertXToCanvasX(line[2][0], width) / width) * 2 - 1,
+      (-convertXToCanvasX(line[2][1], height) / height) * 2 + 1,
+    ];
+    const p3 = [
+      (convertXToCanvasX(line[3][0], width) / width) * 2 - 1,
+      (-convertXToCanvasX(line[3][1], height) / height) * 2 + 1,
+    ];
+
+    let prevPoint = bezier(0, p0, p1, p2, p3);
+
+    for (let i = 1; i <= segmentsPerLine; i++) {
       const t = i / segmentsPerLine;
-      vertexData.set([t, x0, y0, x1, y1, x2, y2, x3, y3], index);
-      index += 9;
+      const point = bezier(t, p0, p1, p2, p3);
+      const normal = computeNormal(prevPoint, point);
+
+      // Offset for thickness
+      const left = [
+        point[0] + normal[0] * lineWidth,
+        point[1] + normal[1] * lineWidth,
+      ];
+      const right = [
+        point[0] - normal[0] * lineWidth,
+        point[1] - normal[1] * lineWidth,
+      ];
+
+      vertexData.push(...left, ...right);
+      prevPoint = point;
     }
-  }
 
-  const vertexBuffer = gl.createBuffer();
-  if (!vertexBuffer) {
-    console.error('Failed to create vertex buffer');
-    return;
-  }
-  gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
+    const vertexBuffer = gl.createBuffer();
+    if (!vertexBuffer) {
+      console.error('Failed to create vertex buffer');
+      return;
+    }
 
-  const tLocation = gl.getAttribLocation(program, 'a_t');
-  const p0Location = gl.getAttribLocation(program, 'a_p0');
-  const p1Location = gl.getAttribLocation(program, 'a_p1');
-  const p2Location = gl.getAttribLocation(program, 'a_p2');
-  const p3Location = gl.getAttribLocation(program, 'a_p3');
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(vertexData),
+      gl.STATIC_DRAW
+    );
 
-  gl.enableVertexAttribArray(tLocation);
-  gl.vertexAttribPointer(tLocation, 1, gl.FLOAT, false, 9 * 4, 0);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-  gl.enableVertexAttribArray(p0Location);
-  gl.vertexAttribPointer(p0Location, 2, gl.FLOAT, false, 9 * 4, 1 * 4);
-
-  gl.enableVertexAttribArray(p1Location);
-  gl.vertexAttribPointer(p1Location, 2, gl.FLOAT, false, 9 * 4, 3 * 4);
-
-  gl.enableVertexAttribArray(p2Location);
-  gl.vertexAttribPointer(p2Location, 2, gl.FLOAT, false, 9 * 4, 5 * 4);
-
-  gl.enableVertexAttribArray(p3Location);
-  gl.vertexAttribPointer(p3Location, 2, gl.FLOAT, false, 9 * 4, 7 * 4);
-
-  let offset = 0;
-  for (let i = 0; i < lines.length; i++) {
-    gl.drawArrays(gl.LINE_STRIP, offset, segmentsPerLine + 1);
-    offset += segmentsPerLine + 1;
-  }
-
-  // Check for errors
-  const error = gl.getError();
-  if (error !== gl.NO_ERROR) {
-    console.error('WebGL Error:', error);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexData.length / 2);
   }
 }
 
