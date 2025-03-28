@@ -42,3 +42,16 @@ export type WebGLProgramInfo<AttributeLocations, UniformLocations> = {
   attribLocations: AttributeLocations;
   uniformLocations: UniformLocations;
 };
+
+export type ControlState = {
+  colorModel: ColorModel;
+  subdivisionCount: number;
+  showControlPoints: boolean;
+  showBezierCurves: boolean;
+  rowCount: number;
+  columnCount: number;
+  useSimpleUV: boolean;
+  animationEnabled: boolean;
+  animationSpeed: number;
+  animationAmplitude: number;
+};
