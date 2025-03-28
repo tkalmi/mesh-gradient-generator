@@ -89,7 +89,6 @@ type ProgramInfo = WebGLProgramInfo<
     a_corners_south_west: number;
   },
   {
-    u_resolution: WebGLUniformLocation;
     u_colors: WebGLUniformLocation;
     u_color_texture: WebGLUniformLocation;
     u_col_row_count: WebGLUniformLocation;
@@ -112,7 +111,6 @@ function getVsSource(useSimpleUV: boolean) {
   layout(location = ${CORNERS_NE_LOCATION}) in vec4 a_corners_north_east;
   layout(location = ${CORNERS_SW_LOCATION}) in vec4 a_corners_south_west;
 
-  uniform vec2 u_resolution;
   uniform vec2 u_col_row_count;
 
   out vec4 v_position;
@@ -162,7 +160,7 @@ function getVsSource(useSimpleUV: boolean) {
 
   void main() {
     // Convert position to clip space (-1, 1) making sure to scale properly
-    vec2 clipSpace = (a_position / u_resolution) * 2.0 - 1.0;
+    vec2 clipSpace = (a_position * 0.01) * 2.0 - 1.0;
     gl_Position = vec4(clipSpace.x, -clipSpace.y, 0.0, 1.0);
 
     v_position = gl_Position;
@@ -563,7 +561,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
       a_corners_south_west: CORNERS_SW_LOCATION,
     },
     uniformLocations: {
-      u_resolution: gl.getUniformLocation(shaderProgram, 'u_resolution')!,
       u_colors: gl.getUniformLocation(shaderProgram, 'u_colors')!,
       u_color_texture: gl.getUniformLocation(shaderProgram, 'u_color_texture')!,
       u_col_row_count: gl.getUniformLocation(shaderProgram, 'u_col_row_count')!,
@@ -742,13 +739,6 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     setCornersAttribute(buffers, programInfo);
 
     gl.useProgram(programInfo.program);
-
-    // Set the resolution to the actual canvas dimensions in pixels
-    gl.uniform2f(
-      programInfo.uniformLocations.u_resolution,
-      gl.canvas.width,
-      gl.canvas.height
-    );
 
     gl.uniform4fv(programInfo.uniformLocations.u_colors, colorTextureData);
 

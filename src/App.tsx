@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import './App.css';
 import { Color, ControlState, CoonsPatch, CubicBezier, Vec2 } from './types';
 import { MARGIN } from './constants';
@@ -274,35 +267,6 @@ function App() {
     });
   }, [rowCount, columnCount]);
 
-  // TODO: Skip the conversion -- if we pass values [0, 100] to the shader, we can convert them there using a simple multiplication
-  const coordinatesToPixels = useCallback(
-    (patch: CoonsPatch<Color>): CoonsPatch<Color> => {
-      const { height, width } = cssCanvasDimensionsRef.current;
-      const dpr = window.devicePixelRatio || 1;
-
-      return {
-        ...patch,
-        north: patch.north.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
-        ]) as CubicBezier,
-        south: patch.south.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
-        ]) as CubicBezier,
-        east: patch.east.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
-        ]) as CubicBezier,
-        west: patch.west.map(([x, y]) => [
-          x * 0.01 * (width - MARGIN.left) * dpr + MARGIN.left,
-          y * 0.01 * (height - MARGIN.top) * dpr + MARGIN.top,
-        ]) as CubicBezier,
-      };
-    },
-    []
-  );
-
   useEffect(() => {
     const context = (() => {
       const canvas = canvasRef.current!;
@@ -336,7 +300,31 @@ function App() {
       columnCount,
       rowCount
     );
-    const coonsPatches = patches.map((patch) => coordinatesToPixels(patch));
+
+    function adjustForMargin(patch: CoonsPatch<Color>): CoonsPatch<Color> {
+      const { height, width } = cssCanvasDimensionsRef.current;
+      const dpr = window.devicePixelRatio || 1;
+      // Convert margins to percentages
+      const marginLeft = ((MARGIN.left / width) * 100) / dpr;
+      const marginRight = ((MARGIN.right / width) * 100) / dpr;
+      const marginTop = ((MARGIN.top / height) * 100) / dpr;
+      const marginBottom = ((MARGIN.bottom / height) * 100) / dpr;
+
+      const getX = (x: number): number =>
+        x * 0.01 * (100 - marginLeft - marginRight) + marginLeft;
+      const getY = (y: number): number =>
+        y * 0.01 * (100 - marginTop - marginBottom) + marginTop;
+
+      return {
+        ...patch,
+        north: patch.north.map(([x, y]) => [getX(x), getY(y)]) as CubicBezier,
+        south: patch.south.map(([x, y]) => [getX(x), getY(y)]) as CubicBezier,
+        east: patch.east.map(([x, y]) => [getX(x), getY(y)]) as CubicBezier,
+        west: patch.west.map(([x, y]) => [getX(x), getY(y)]) as CubicBezier,
+      };
+    }
+
+    const coonsPatches = patches.map((patch) => adjustForMargin(patch));
     const tensorPatches = coonsPatches.map((coonsPatch) =>
       coonsToTensorPatch(coonsPatch)
     );
@@ -366,7 +354,7 @@ function App() {
     columnCount,
     rowCount,
     colorModel,
-    coordinatesToPixels,
+    // coordinatesToPixels,
     subdivisionCount,
     convertedColors,
     showControlPoints,
