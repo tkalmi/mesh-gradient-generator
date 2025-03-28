@@ -2,6 +2,11 @@ import { Color } from '../types';
 
 const div255 = 1 / 255;
 
+/**
+ * Takes a tuple of rgba values and returns a corresponding hex string
+ * @param rgba
+ * @returns
+ */
 export function rgbaToHex(rgba: Color): string {
   return `#${rgba
     .slice(0, 3)
@@ -9,6 +14,11 @@ export function rgbaToHex(rgba: Color): string {
     .join('')}`;
 }
 
+/**
+ * Takes a color hex string and returns an rgba tuple
+ * @param hex
+ * @returns
+ */
 export function hexToRgb(hex: string): Color {
   return [
     parseInt(hex.slice(1, 3), 16),

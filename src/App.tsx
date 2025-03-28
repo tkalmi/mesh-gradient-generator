@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import './App.css';
 import { Color, ControlState, CoonsPatch, CubicBezier, Vec2 } from './types';
 import { MARGIN } from './constants';
@@ -9,132 +16,12 @@ import { renderControlPoints } from './meshGradient/controlPoints';
 import { animatePoint } from './meshGradient/animationUtils';
 import Controls from './Controls';
 import CanvasWrapper from './CanvasWrapper';
-
-function getNewPoints(rowCount: number, columnCount: number): Vec2[] {
-  const newPoints: Vec2[] = [];
-
-  for (let i = 0; i <= rowCount * 3; i++) {
-    for (let j = 0; j <= columnCount * 3; j++) {
-      if (i % 3 !== 0 && j % 3 !== 0) {
-        continue;
-      }
-      newPoints.push([
-        (j / (columnCount * 3)) * 100,
-        (i / (rowCount * 3)) * 100,
-      ]);
-    }
-  }
-
-  return newPoints;
-}
-
-function getColors(rowCount: number, columnCount: number): Color[] {
-  const colors: Color[] = [];
-  for (let i = 0; i < (columnCount + 1) * (rowCount + 1); i++) {
-    colors.push([
-      Math.round(Math.random() * 255),
-      Math.round(Math.random() * 255),
-      Math.round(Math.random() * 255),
-      255,
-    ]);
-  }
-  return colors;
-}
-
-function getColumnsAndRowsFromPoints(
-  rawPoints: Vec2[],
-  columnCount: number,
-  rowCount: number
-): { columns: CubicBezier[]; rows: CubicBezier[] } {
-  const backupPoints = getNewPoints(rowCount, columnCount);
-  const points =
-    backupPoints.length === rawPoints.length ? rawPoints : backupPoints;
-  const rows: CubicBezier[] = [];
-  for (let i = 0; i <= rowCount; i++) {
-    for (let j = 0; j < columnCount; j++) {
-      const startInd = i * (columnCount * 5 + 3) + j * 3;
-      const row: CubicBezier = [
-        points[startInd],
-        points[startInd + 1],
-        points[startInd + 2],
-        points[startInd + 3],
-      ];
-      rows.push(row);
-    }
-  }
-
-  const columns: CubicBezier[] = [];
-  for (let j = 0; j < rowCount; j++) {
-    for (let i = 0; i <= columnCount; i++) {
-      const column: Vec2[] = [
-        points[j * (columnCount * 5 + 3) + (i % (columnCount + 1)) * 3],
-        points[(j + 1) * (columnCount * 3 + 1) + 2 * j * (columnCount + 1) + i],
-        points[
-          (j + 1) * (columnCount * 3 + 1) + (2 * j + 1) * (columnCount + 1) + i
-        ],
-        points[(j + 1) * (columnCount * 5 + 3) + (i % (columnCount + 1)) * 3],
-      ];
-
-      columns.push(column as CubicBezier);
-    }
-  }
-
-  return { columns, rows };
-}
-
-function getCoonsPatchFromRowsAndColumns(
-  columns: CubicBezier[],
-  rows: CubicBezier[],
-  colors: Color[],
-  columnCount: number,
-  rowCount: number
-): CoonsPatch<Color>[] {
-  const patches: CoonsPatch<Color>[] = [];
-
-  for (let i = 0; i < rowCount; i++) {
-    for (let j = 0; j < columnCount; j++) {
-      // Take the ith row; this is north
-      // Take the (i + columnCount)th row and flip it; this is south
-      // Take the column with the same starting point as north's start, then flip it; this is west
-      // Take the column with the same starting point as north's end; this is east
-      const north = rows[i * columnCount + j];
-      const south = rows[(i + 1) * columnCount + j]
-        .slice()
-        .reverse() as CubicBezier;
-      const west = columns
-        .find(
-          (column) =>
-            column[0][0] === north[0][0] && column[0][1] === north[0][1]
-        )
-        ?.slice()
-        .reverse() as CubicBezier;
-      const east = columns.find(
-        (column) => column[0][0] === north[3][0] && column[0][1] === north[3][1]
-      ) as CubicBezier;
-
-      const coonsValues = {
-        northValue: colors[i * (columnCount + 1) + (j % (columnCount + 1))],
-        eastValue: colors[i * (columnCount + 1) + (j % (columnCount + 1)) + 1],
-        southValue:
-          colors[(i + 1) * (columnCount + 1) + (j % (columnCount + 1)) + 1],
-        westValue:
-          colors[(i + 1) * (columnCount + 1) + (j % (columnCount + 1))],
-      };
-
-      const coonsPatch: CoonsPatch<Color> = {
-        north,
-        east,
-        south,
-        west,
-        coonsValues,
-      };
-
-      patches.push(coonsPatch);
-    }
-  }
-
-  return patches;
-}
+import {
+  getColors,
+  getColumnsAndRowsFromPoints,
+  getCoonsPatchFromRowsAndColumns,
+  getNewPoints,
+} from './appHelpers';
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -229,6 +116,14 @@ function App() {
     () => getColumnsAndRowsFromPoints(animatedPoints, columnCount, rowCount),
     [animatedPoints, columnCount, rowCount]
   );
+
+  const handleRandomizeColors = useCallback(() => {
+    setColors(getColors(rowCount, columnCount));
+    if (animationEnabled) {
+      timeRef.current = 0;
+      seedRef.current = Math.random() * 1000;
+    }
+  }, [animationEnabled, columnCount, rowCount]);
 
   const colors = useMemo(() => {
     const baseColors = (() => {
@@ -354,7 +249,6 @@ function App() {
     columnCount,
     rowCount,
     colorModel,
-    // coordinatesToPixels,
     subdivisionCount,
     convertedColors,
     showControlPoints,
@@ -387,39 +281,13 @@ function App() {
     };
   }, [animationEnabled, animationSpeed]);
 
-  useEffect(() => {
-    if (canvasRef.current) {
-      const currentDevicePixelRatio = window.devicePixelRatio || 1;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-
-      cssCanvasDimensionsRef.current = {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      };
-
-      canvasRef.current.width = rect.width * currentDevicePixelRatio;
-      canvasRef.current.height = rect.height * currentDevicePixelRatio;
-
-      canvasRef.current.style.width = `${rect.width}px`;
-      canvasRef.current.style.height = `${rect.height}px`;
-
-      canvasDimensionsRef.current = {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width * currentDevicePixelRatio,
-        height: rect.height * currentDevicePixelRatio,
-      };
-    }
-  }, []);
-
+  // Initialize canvas sizing and handle resize
   useEffect(() => {
     const handleResize = () => {
       if (canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
         const currentDevicePixelRatio = window.devicePixelRatio || 1;
+
+        const rect = canvasRef.current.getBoundingClientRect();
 
         cssCanvasDimensionsRef.current = {
           left: rect.left,
@@ -428,19 +296,23 @@ function App() {
           height: rect.height,
         };
 
+        canvasRef.current.width = rect.width * currentDevicePixelRatio;
+        canvasRef.current.height = rect.height * currentDevicePixelRatio;
+
+        canvasRef.current.style.width = `${rect.width}px`;
+        canvasRef.current.style.height = `${rect.height}px`;
+
         canvasDimensionsRef.current = {
           left: rect.left,
           top: rect.top,
           width: rect.width * currentDevicePixelRatio,
           height: rect.height * currentDevicePixelRatio,
         };
-
-        canvasRef.current.width = rect.width * currentDevicePixelRatio;
-        canvasRef.current.height = rect.height * currentDevicePixelRatio;
       }
     };
 
     window.addEventListener('resize', handleResize);
+    handleResize();
     return () => {
       window.removeEventListener('resize', handleResize);
     };
@@ -455,23 +327,11 @@ function App() {
 
   return (
     <div className="main-container">
-      <div>
-        <Controls state={controlState} dispatch={dispatchControlState} />
-
-        <button
-          type="button"
-          style={{ marginTop: '1rem' }}
-          onClick={() => {
-            setColors(getColors(rowCount, columnCount));
-            if (animationEnabled) {
-              timeRef.current = 0;
-              seedRef.current = Math.random() * 1000;
-            }
-          }}
-        >
-          Randomize colors
-        </button>
-      </div>
+      <Controls
+        state={controlState}
+        dispatch={dispatchControlState}
+        handleRandomizeColors={handleRandomizeColors}
+      />
 
       <CanvasWrapper
         canvasRef={canvasRef}

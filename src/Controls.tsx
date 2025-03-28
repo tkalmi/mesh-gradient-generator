@@ -6,10 +6,11 @@ type Props = {
   dispatch: React.Dispatch<
     [key: keyof ControlState, value: ControlState[keyof ControlState]]
   >;
+  handleRandomizeColors: () => void;
 };
 
 function Controls(props: Props) {
-  const { state, dispatch } = props;
+  const { state, dispatch, handleRandomizeColors } = props;
   const {
     colorModel,
     subdivisionCount,
@@ -245,6 +246,14 @@ function Controls(props: Props) {
           columns
         </label>
       </fieldset>
+
+      <button
+        type="button"
+        style={{ marginTop: '1rem' }}
+        onClick={handleRandomizeColors}
+      >
+        Randomize colors
+      </button>
     </form>
   );
 }
