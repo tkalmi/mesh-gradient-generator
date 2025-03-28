@@ -149,6 +149,7 @@ function App() {
     }
   }, [colors, colorModel]);
 
+  // Initialize new points when row or column count changes
   useEffect(() => {
     const newPoints = getNewPoints(rowCount, columnCount);
     setPoints(newPoints);
@@ -162,6 +163,7 @@ function App() {
     });
   }, [rowCount, columnCount]);
 
+  // Handle rendering, which is triggered when any of the parameters change
   useEffect(() => {
     const context = (() => {
       const canvas = canvasRef.current!;
@@ -257,6 +259,7 @@ function App() {
     forceUpdateKey,
   ]);
 
+  // Handle animation loop
   useEffect(() => {
     let animationFrame: number | null = null;
     const animate = () => {
@@ -318,6 +321,7 @@ function App() {
     };
   }, []);
 
+  // Re-seed animation params when toggled on.
   useEffect(() => {
     if (animationEnabled) {
       timeRef.current = 0;
