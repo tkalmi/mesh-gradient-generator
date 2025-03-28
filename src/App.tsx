@@ -16,6 +16,7 @@ import {
 } from './meshGradient/colors';
 import { renderTensorPatchesWithSubdivisionWebGL } from './meshGradient/tensorPatchSubdivision';
 import { renderControlPoints } from './meshGradient/controlPoints';
+import { animatePoint } from './meshGradient/animationUtils';
 
 function getNewPoints(rowCount: number, columnCount: number): Vec2[] {
   const newPoints: Vec2[] = [];
@@ -161,8 +162,9 @@ function App() {
   }>({ left: 0, top: 0, height: 600, width: 800 });
 
   const colorPickerRef = useRef<HTMLInputElement>(null);
-
-  const [points, setPoints] = useState<Vec2[]>(getNewPoints(1, 1));
+  const timeRef = useRef(0);
+  const seedRef = useRef(Math.random() * 1000);
+  const [forceUpdateKey, setForceUpdateKey] = useState(0); // The sole purpose of this state is to retrigger a useMemo call
 
   const [colorModel, setColorModel] = useState<ColorModel>('rgba');
   const [subdivisionCount, setSubdivisionCount] = useState(4);
@@ -170,32 +172,67 @@ function App() {
   const [showControlPoints, setShowControlPoints] = useState(true);
   const [rowCount, setRowCount] = useState(2);
   const [columnCount, setColumnCount] = useState(2);
-  // In RGBA, two for each row
+  const [useSimpleUV, setUseSimpleUV] = useState(false);
+
+  const [points, setPoints] = useState<Vec2[]>(getNewPoints(1, 1));
+  const [animationEnabled, setAnimationEnabled] = useState(false);
+  const [animationSpeed, setAnimationSpeed] = useState(1);
+  const [animationAmplitude, setAnimationAmplitude] = useState(5);
   const [rawColors, setColors] = useState<Color[]>(
     getColors(rowCount, columnCount)
   );
-  const [useSimpleUV, setUseSimpleUV] = useState(false);
 
-  const { columns, rows } = getColumnsAndRowsFromPoints(
-    points,
-    columnCount,
-    rowCount
+  const animatedPoints = useMemo(() => {
+    if (!animationEnabled) return points;
+
+    return points.map((point, index) => {
+      const [x, y] = point;
+
+      // Instead of calculating rows/columns, use the actual position values
+      // Points are on the edge if they're at 0% or 100%
+      const isOnLeftEdge = Math.abs(x) < 0.01; // x ≈ 0
+      const isOnRightEdge = Math.abs(x - 100) < 0.01; // x ≈ 100
+      const isOnTopEdge = Math.abs(y) < 0.01; // y ≈ 0
+      const isOnBottomEdge = Math.abs(y - 100) < 0.01; // y ≈ 100
+
+      // Keep all edge points stable
+      if (isOnLeftEdge || isOnRightEdge || isOnTopEdge || isOnBottomEdge) {
+        return point;
+      }
+
+      // Only animate interior points
+      return animatePoint(
+        point,
+        timeRef.current,
+        seedRef.current + index,
+        animationAmplitude
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, animationEnabled, animationAmplitude, forceUpdateKey]);
+
+  const { columns, rows } = useMemo(
+    () => getColumnsAndRowsFromPoints(animatedPoints, columnCount, rowCount),
+    [animatedPoints, columnCount, rowCount]
   );
 
-  const colors = (() => {
-    const newColors = getColors(rowCount, columnCount);
-    if (newColors.length === rawColors.length) {
-      return rawColors;
-    }
-    return newColors;
-  })();
+  const colors = useMemo(() => {
+    const baseColors = (() => {
+      const newColors = getColors(rowCount, columnCount);
+      if (newColors.length === rawColors.length) {
+        return rawColors;
+      }
+      return newColors;
+    })();
+
+    return baseColors;
+  }, [rawColors, rowCount, columnCount]);
 
   const [activeColorIndex, setActiveColorIndex] = useState<
     [number, number] | null
   >(null);
 
   const convertedColors = useMemo(() => {
-    // Convert to proper color model here if necessary
     switch (colorModel) {
       case 'hsla':
         return colors.map((color) => rgbaToHsla(color));
@@ -269,6 +306,12 @@ function App() {
       return context;
     })();
 
+    const { columns: uiColumns, rows: uiRows } = getColumnsAndRowsFromPoints(
+      points,
+      columnCount,
+      rowCount
+    );
+
     const patches = getCoonsPatchFromRowsAndColumns(
       columns,
       rows,
@@ -294,12 +337,13 @@ function App() {
 
     renderControlPoints(
       context,
-      columns,
-      rows,
+      uiColumns,
+      uiRows,
       showControlPoints,
       showBezierCurves
     );
   }, [
+    points,
     columns,
     rows,
     columnCount,
@@ -311,7 +355,32 @@ function App() {
     showControlPoints,
     showBezierCurves,
     useSimpleUV,
+    forceUpdateKey,
   ]);
+
+  useEffect(() => {
+    let animationFrame: number | null = null;
+    const animate = () => {
+      timeRef.current += 0.015 * animationSpeed;
+
+      setForceUpdateKey((prev) => prev + 1);
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    if (animationEnabled) {
+      animationFrame = requestAnimationFrame(animate);
+    } else if (animationFrame !== null) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    }
+
+    return () => {
+      if (animationFrame !== null) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+    };
+  }, [animationEnabled, animationSpeed]);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -371,6 +440,13 @@ function App() {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    if (animationEnabled) {
+      timeRef.current = 0;
+      seedRef.current = Math.random() * 1000;
+    }
+  }, [animationEnabled]);
 
   const lastMouseDownTimestampRef = useRef(0);
   const draggedPointIndexRef = useRef<number | null>(null);
@@ -450,18 +526,20 @@ function App() {
           ? (event as React.TouchEvent<HTMLDivElement>).changedTouches[0]
           : (event as React.MouseEvent<HTMLDivElement>);
       const x =
-        ((Math.min(
-          Math.max(CONTROL_POINT_RADIUS, clientX - left),
-          width - CONTROL_POINT_RADIUS
+        ((clamp(
+          CONTROL_POINT_RADIUS,
+          width - CONTROL_POINT_RADIUS,
+          clientX - left
         ) -
           MARGIN.left) /
           (width - MARGIN.left - MARGIN.right)) *
         100;
 
       const y =
-        ((Math.min(
-          Math.max(CONTROL_POINT_RADIUS, clientY - top),
-          height - CONTROL_POINT_RADIUS
+        ((clamp(
+          CONTROL_POINT_RADIUS,
+          height - CONTROL_POINT_RADIUS,
+          clientY - top
         ) -
           MARGIN.top) /
           (height - MARGIN.top - MARGIN.bottom)) *
@@ -548,6 +626,60 @@ function App() {
           e.preventDefault();
         }}
       >
+        <fieldset>
+          <legend>Animation</legend>
+          <label>
+            <input
+              type="checkbox"
+              id="animationEnabled"
+              name="animationEnabled"
+              checked={animationEnabled}
+              onChange={() => setAnimationEnabled((prev) => !prev)}
+            />{' '}
+            Enable animation
+          </label>
+          {animationEnabled && (
+            <>
+              <div>
+                <label htmlFor="animation-speed">
+                  Speed: {animationSpeed.toFixed(1)}
+                </label>
+                <input
+                  style={{ marginInline: '0.5em', width: '100%' }}
+                  id="animation-speed"
+                  value={animationSpeed}
+                  onChange={(event) =>
+                    setAnimationSpeed(clamp(0.1, 5, Number(event.target.value)))
+                  }
+                  type="range"
+                  min={0.1}
+                  max={5}
+                  step={0.1}
+                />
+              </div>
+              <div>
+                <label htmlFor="animation-amplitude">
+                  Amplitude: {animationAmplitude}
+                </label>
+                <input
+                  style={{ marginInline: '0.5em', width: '100%' }}
+                  id="animation-amplitude"
+                  value={animationAmplitude}
+                  onChange={(event) =>
+                    setAnimationAmplitude(
+                      clamp(1, 15, Math.round(Number(event.target.value)))
+                    )
+                  }
+                  type="range"
+                  min={1}
+                  max={15}
+                  step={1}
+                />
+              </div>
+            </>
+          )}
+        </fieldset>
+
         <fieldset>
           <legend>Select patch subdivision count</legend>
           <label>
@@ -698,7 +830,13 @@ function App() {
         <button
           type="button"
           style={{ marginTop: '1rem' }}
-          onClick={() => setColors(getColors(rowCount, columnCount))}
+          onClick={() => {
+            setColors(getColors(rowCount, columnCount));
+            if (animationEnabled) {
+              timeRef.current = 0;
+              seedRef.current = Math.random() * 1000;
+            }
+          }}
         >
           Randomize colors
         </button>
