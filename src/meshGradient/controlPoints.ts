@@ -164,7 +164,7 @@ export function renderBezierCurvesWebGL(
   const segmentsPerLine = 300; // Increased for smoother curves
 
   // Slightly increase line width to visually close any small gaps
-  const pixelLineWidth = 4.5; // Increased from previous value
+  const pixelLineWidth = 2.25 * window.devicePixelRatio; // Increased from previous value
 
   // Lines in WebGL are drawn in normalized device coordinates
   const lines = columns.concat(rows);
