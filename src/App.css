@@ -45,7 +45,7 @@
   left: 0;
   top: 0;
   translate: 0 -100%;
-  z-index: 1;
+  z-index: 2;
   border: none;
   border-radius: 0.25rem;
   background: black;
@@ -60,4 +60,14 @@
 
 .tooltip-anchor:hover + .tooltip-content {
   opacity: 1;
+}
+
+fieldset {
+  position: relative;
+  border-radius: 0.25rem;
+  border-color: #5b5b66;
+}
+
+legend {
+  text-align: start;
 }
