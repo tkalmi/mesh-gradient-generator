@@ -9,8 +9,8 @@ import { hexToRgb, rgbaToHex } from './meshGradient/colors';
 import { Color, ControlState, Vec2 } from './types';
 
 type Props = {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  containerRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   cssCanvasDimensionsRef: React.RefObject<{
     left: number;
     top: number;
