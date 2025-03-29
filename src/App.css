@@ -17,8 +17,47 @@
   justify-content: center;
 }
 
-@media (max-width: 1028px) {
+@media (max-width: 1280px) {
   .main-container {
     flex-direction: column-reverse;
+    align-items: center;
   }
+}
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-anchor {
+  cursor: help;
+  translate: 0 0.125rem;
+  padding: 0;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+.tooltip-content {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: 0 -100%;
+  z-index: 1;
+  border: none;
+  border-radius: 0.25rem;
+  background: black;
+  color: white;
+  padding: 0.125rem 0.5rem;
+  width: max-content;
+  max-width: 300px;
+  font-size: 0.75rem;
+  text-align: start;
+  transition: opacity 150ms ease-in-out;
+}
+
+.tooltip-anchor:hover + .tooltip-content {
+  opacity: 1;
 }
