@@ -205,52 +205,63 @@ function CanvasWrapper(props: Props) {
   );
 
   return (
-    <div
-      style={{ width: 800, height: 600, position: 'relative' }}
-      className="hover-container"
-      onTouchMove={handleCursorMove}
-      onTouchEnd={handleCursorUp}
-      onMouseMove={handleCursorMove}
-      onMouseUp={handleCursorUp}
-      ref={containerRef}
-    >
-      <input
-        style={{
-          opacity: 0,
-          visibility: 'hidden',
-          width: 0,
-          height: 0,
-          position: 'absolute',
-          top: convertYToCanvasY(
-            points[activeColorIndex?.[1] ?? 0][1],
-            (canvasRef.current?.height ?? 0) / devicePixelRatio
-          ),
-          left: convertXToCanvasX(
-            points[activeColorIndex?.[1] ?? 0][0],
-            (canvasRef.current?.width ?? 0) / devicePixelRatio
-          ),
-          pointerEvents: activeColorIndex == null ? 'none' : 'auto',
-        }}
-        type="color"
-        id="color-picker"
-        value={rgbaToHex(colors[activeColorIndex?.[0] ?? 0])}
-        autoFocus
-        onChange={(event: React.FormEvent<HTMLInputElement>) => {
-          const value = event.currentTarget.value;
-          setColors((prevColors) =>
-            prevColors.map((color, ind) =>
-              ind === activeColorIndex?.[0] ? hexToRgb(value) : color
-            )
-          );
-        }}
-        ref={colorPickerRef}
-      />
-      <canvas
-        style={{ width: 800, height: 600 }}
-        ref={canvasRef}
-        onMouseDown={handleCursorDown}
-        onTouchStart={handleCursorDown}
-      />
+    <div>
+      <div
+        style={{ width: 800, height: 600, position: 'relative' }}
+        className="hover-container"
+        onTouchMove={handleCursorMove}
+        onTouchEnd={handleCursorUp}
+        onMouseMove={handleCursorMove}
+        onMouseUp={handleCursorUp}
+        ref={containerRef}
+      >
+        <input
+          style={{
+            opacity: 0,
+            visibility: 'hidden',
+            width: 0,
+            height: 0,
+            position: 'absolute',
+            top: convertYToCanvasY(
+              points[activeColorIndex?.[1] ?? 0][1],
+              (canvasRef.current?.height ?? 0) / devicePixelRatio
+            ),
+            left: convertXToCanvasX(
+              points[activeColorIndex?.[1] ?? 0][0],
+              (canvasRef.current?.width ?? 0) / devicePixelRatio
+            ),
+            pointerEvents: activeColorIndex == null ? 'none' : 'auto',
+          }}
+          type="color"
+          id="color-picker"
+          value={rgbaToHex(colors[activeColorIndex?.[0] ?? 0])}
+          autoFocus
+          onChange={(event: React.FormEvent<HTMLInputElement>) => {
+            const value = event.currentTarget.value;
+            setColors((prevColors) =>
+              prevColors.map((color, ind) =>
+                ind === activeColorIndex?.[0] ? hexToRgb(value) : color
+              )
+            );
+          }}
+          ref={colorPickerRef}
+        />
+        <canvas
+          style={{ width: 800, height: 600 }}
+          ref={canvasRef}
+          onMouseDown={handleCursorDown}
+          onTouchStart={handleCursorDown}
+        />
+      </div>
+      <p>
+        Feeling lost? Instructions{' '}
+        <a
+          href="https://github.com/tkalmi/mesh-gradient-generator"
+          target="__blank"
+        >
+          here
+        </a>
+      </p>
     </div>
   );
 }
