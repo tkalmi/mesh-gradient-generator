@@ -1,8 +1,6 @@
 .hover-container {
-  position: absolute;
-  display: flex;
-  inset: 0;
-  place-items: center;
+  position: relative;
+  touch-action: none;
 }
 
 .main-container {
@@ -13,15 +11,9 @@
   display: flex;
   flex-direction: row;
   gap: 2rem;
-  min-width: 100vw;
+  min-width: calc(100vw - 2rem);
   justify-content: center;
-}
-
-@media (max-width: 1280px) {
-  .main-container {
-    flex-direction: column-reverse;
-    align-items: center;
-  }
+  margin-bottom: 1rem;
 }
 
 .tooltip-container {
@@ -36,30 +28,56 @@
   background: none;
   border: none;
   outline: none;
+
+  &:focus {
+    outline: none;
+  }
 }
 
-.tooltip-content {
-  opacity: 0;
+.tooltip-hover-content,
+.tooltip-popover-content {
+  z-index: 2;
+  width: max-content;
+  background: black;
+  max-width: 300px;
+  text-align: start;
+  border-radius: 0.25rem;
   pointer-events: none;
+  padding: 0.125rem 0.5rem;
+  color: white;
+}
+
+.tooltip-hover-content {
   position: absolute;
   left: 0;
+  opacity: 0;
   top: 0;
   translate: 0 -100%;
-  z-index: 2;
   border: none;
-  border-radius: 0.25rem;
-  background: black;
-  color: white;
-  padding: 0.125rem 0.5rem;
-  width: max-content;
-  max-width: 300px;
   font-size: 0.75rem;
-  text-align: start;
   transition: opacity 150ms ease-in-out;
 }
 
-.tooltip-anchor:hover + .tooltip-content {
+.tooltip-popover-content {
+  pointer-events: none;
+}
+
+.tooltip-anchor:hover ~ .tooltip-hover-content {
   opacity: 1;
+}
+
+@media (max-width: 1280px) {
+  .main-container {
+    flex-direction: column-reverse;
+  }
+  .tooltip-hover-content {
+    display: none;
+  }
+}
+
+form {
+  max-width: 100%;
+  overflow: hidden;
 }
 
 fieldset {

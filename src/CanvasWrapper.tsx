@@ -49,6 +49,8 @@ function CanvasWrapper(props: Props) {
     (
       event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
     ): number => {
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
       const { left, top } = cssCanvasDimensionsRef.current!;
       const { width, height } = cssCanvasDimensionsRef.current!;
 
@@ -60,17 +62,21 @@ function CanvasWrapper(props: Props) {
         'changedTouches' in event
           ? (event as React.TouchEvent<HTMLElement>).changedTouches[0].clientY
           : (event as React.MouseEvent<HTMLElement>).clientY - top;
-      const distanceThreshold =
-        'changedTouches' in event ? 50 : CONTROL_POINT_RADIUS;
       const index = points.findIndex((point) => {
         const [px, py] = point;
         return (
           Math.abs(
-            px * 0.01 * (width - MARGIN.left - MARGIN.right) + MARGIN.left - x
-          ) <= distanceThreshold &&
+            px * 0.01 * (width - MARGIN.left - MARGIN.right) +
+              MARGIN.left -
+              x -
+              scrollX
+          ) <= CONTROL_POINT_RADIUS &&
           Math.abs(
-            py * 0.01 * (height - MARGIN.top - MARGIN.bottom) + MARGIN.top - y
-          ) <= distanceThreshold
+            py * 0.01 * (height - MARGIN.top - MARGIN.bottom) +
+              MARGIN.top -
+              y -
+              scrollY
+          ) <= CONTROL_POINT_RADIUS
         );
       });
 
@@ -113,6 +119,8 @@ function CanvasWrapper(props: Props) {
         return;
       }
       container.style.cursor = 'grabbing';
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
       const { left, top } = cssCanvasDimensionsRef.current!;
       const { width, height } = cssCanvasDimensionsRef.current!;
       const { clientX, clientY } =
@@ -123,7 +131,7 @@ function CanvasWrapper(props: Props) {
         ((clamp(
           CONTROL_POINT_RADIUS,
           width - CONTROL_POINT_RADIUS,
-          clientX - left
+          clientX - left + scrollX
         ) -
           MARGIN.left) /
           (width - MARGIN.left - MARGIN.right)) *
@@ -133,7 +141,7 @@ function CanvasWrapper(props: Props) {
         ((clamp(
           CONTROL_POINT_RADIUS,
           height - CONTROL_POINT_RADIUS,
-          clientY - top
+          clientY - top + scrollY
         ) -
           MARGIN.top) /
           (height - MARGIN.top - MARGIN.bottom)) *
@@ -207,7 +215,6 @@ function CanvasWrapper(props: Props) {
   return (
     <div>
       <div
-        style={{ width: 800, height: 600, position: 'relative' }}
         className="hover-container"
         onTouchMove={handleCursorMove}
         onTouchEnd={handleCursorUp}
@@ -247,7 +254,6 @@ function CanvasWrapper(props: Props) {
           ref={colorPickerRef}
         />
         <canvas
-          style={{ width: 800, height: 600 }}
           ref={canvasRef}
           onMouseDown={handleCursorDown}
           onTouchStart={handleCursorDown}

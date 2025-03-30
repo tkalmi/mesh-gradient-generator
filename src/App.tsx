@@ -290,32 +290,40 @@ function App() {
       if (canvasRef.current) {
         const currentDevicePixelRatio = window.devicePixelRatio || 1;
 
-        const rect = canvasRef.current.getBoundingClientRect();
+        const rect = containerRef.current!.getBoundingClientRect(); // Use container dimensions
+        const width = Math.min(
+          document.documentElement.clientWidth || document.body.clientWidth,
+          800
+        ); // Ensure max width is 800px
 
         cssCanvasDimensionsRef.current = {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
+          left: rect.left + window.scrollX,
+          top: rect.top + window.scrollY,
+          width,
+          height: width * (3 / 4), // Maintain 4:3 aspect ratio
         };
 
-        canvasRef.current.width = rect.width * currentDevicePixelRatio;
-        canvasRef.current.height = rect.height * currentDevicePixelRatio;
+        canvasRef.current.width =
+          cssCanvasDimensionsRef.current.width * currentDevicePixelRatio;
+        canvasRef.current.height =
+          cssCanvasDimensionsRef.current.height * currentDevicePixelRatio;
 
-        canvasRef.current.style.width = `${rect.width}px`;
-        canvasRef.current.style.height = `${rect.height}px`;
+        canvasRef.current.style.width = `${cssCanvasDimensionsRef.current.width}px`;
+        canvasRef.current.style.height = `${cssCanvasDimensionsRef.current.height}px`;
 
         canvasDimensionsRef.current = {
           left: rect.left,
           top: rect.top,
-          width: rect.width * currentDevicePixelRatio,
-          height: rect.height * currentDevicePixelRatio,
+          width: cssCanvasDimensionsRef.current.width * currentDevicePixelRatio,
+          height:
+            cssCanvasDimensionsRef.current.height * currentDevicePixelRatio,
         };
+        setForceUpdateKey((prev) => prev + 1); // Force rerender
       }
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize();
+    handleResize(); // Call initially to set dimensions
     return () => {
       window.removeEventListener('resize', handleResize);
     };
