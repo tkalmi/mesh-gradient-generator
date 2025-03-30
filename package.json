@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Tomi Kalmi"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
