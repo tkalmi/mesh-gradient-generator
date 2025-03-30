@@ -6,15 +6,15 @@ This code doesn't have any practical purpose; it's just art and for fun.
 
 To change the shapes drawn on canvas:
 
-Drag the control points around to make interesting shapes and curves. You can also click at control points at patch corners to change their colors.
+Drag the control points around to make interesting shapes and curves. You can also click at control points at patch corners to change their colors. You can make further changes with the control panel.
 
-You can make further changes with the control panel, but that should be self-explanatory.
+Here's a video demoing all the features:
 
+https://github.com/user-attachments/assets/876adacc-a8ae-4d8e-a08f-76827f74e635
 
 ## Installation/Development
 
 You will need Node.js, its package manager `npm`, and a web browser.
-
 
 Tested that it works on the following setup:
 
