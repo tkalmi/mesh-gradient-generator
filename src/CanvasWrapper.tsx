@@ -254,13 +254,14 @@ function CanvasWrapper(props: Props) {
         />
       </div>
       <p>
-        Feeling lost? Instructions{' '}
+        Feeling lost? Instructions in the{' '}
         <a
           href="https://github.com/tkalmi/mesh-gradient-generator"
           target="__blank"
         >
-          here
+          GitHub repo
         </a>
+        .
       </p>
     </div>
   );
