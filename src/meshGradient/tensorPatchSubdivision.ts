@@ -576,7 +576,7 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     },
   };
 
-  function initBuffers() {
+  function initBuffers(): Buffers {
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, sortedVertices, gl.STATIC_DRAW);
@@ -602,12 +602,12 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     gl.bufferData(gl.ARRAY_BUFFER, sortedCorners2, gl.STATIC_DRAW);
 
     return {
-      a_position: positionBuffer,
-      a_uv_north_east: uvNorthEastBuffer,
-      a_uv_south_west: uvSouthWestBuffer,
-      a_north_color_location: northColorBuffer,
-      a_corners_north_east: cornersNorthEastBuffer,
-      a_corners_south_west: cornersSouthWestBuffer,
+      a_position: positionBuffer!,
+      a_uv_north_east: uvNorthEastBuffer!,
+      a_uv_south_west: uvSouthWestBuffer!,
+      a_north_color_location: northColorBuffer!,
+      a_corners_north_east: cornersNorthEastBuffer!,
+      a_corners_south_west: cornersSouthWestBuffer!,
     };
   }
 
@@ -710,7 +710,7 @@ export function renderTensorPatchesWithSubdivisionWebGL(
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
   }
 
-  const buffers = initBuffers();
+  const buffers: Buffers = initBuffers();
 
   drawPatch(buffers, programInfo);
 }
