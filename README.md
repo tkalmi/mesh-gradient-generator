@@ -2,6 +2,8 @@
 
 Test it here: https://tkalmi.github.io/mesh-gradient-generator/
 
+Check out the related blog post here: https://tkalmi.dev/blog/mesh-gradient-generator
+
 This code doesn't have any practical purpose; it's just art and for fun.
 
 To change the shapes drawn on canvas:
