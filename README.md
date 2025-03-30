@@ -8,7 +8,7 @@ This code doesn't have any practical purpose; it's just art and for fun.
 
 To change the shapes drawn on canvas:
 
-Drag the control points around to make interesting shapes and curves. You can also click at control points at patch corners to change their colors. You can make further changes with the control panel.
+Drag the control points around to make interesting shapes and curves. You can also click control points at patch corners to change their colors. You can make further changes with the control panel.
 
 Here's a video demoing all the features:
 
