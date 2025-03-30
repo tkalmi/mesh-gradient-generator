@@ -1,5 +1,7 @@
 # Mesh Gradient Generator
 
+Test it here: https://tkalmi.github.io/mesh-gradient-generator/
+
 This code doesn't have any practical purpose; it's just art and for fun.
 
 To change the shapes drawn on canvas:
@@ -12,6 +14,7 @@ You can make further changes with the control panel, but that should be self-exp
 ## Installation/Development
 
 You will need Node.js, its package manager `npm`, and a web browser.
+
 
 Tested that it works on the following setup:
 
