@@ -65,18 +65,10 @@ function CanvasWrapper(props: Props) {
       const index = points.findIndex((point) => {
         const [px, py] = point;
         return (
-          Math.abs(
-            px * 0.01 * (width - MARGIN.left - MARGIN.right) +
-              MARGIN.left -
-              x -
-              scrollX
-          ) <= CONTROL_POINT_RADIUS &&
-          Math.abs(
-            py * 0.01 * (height - MARGIN.top - MARGIN.bottom) +
-              MARGIN.top -
-              y -
-              scrollY
-          ) <= CONTROL_POINT_RADIUS
+          Math.abs(convertXToCanvasX(px, width) - x - scrollX) <=
+            CONTROL_POINT_RADIUS &&
+          Math.abs(convertYToCanvasY(py, height) - y - scrollY) <=
+            CONTROL_POINT_RADIUS
         );
       });
 
@@ -213,7 +205,13 @@ function CanvasWrapper(props: Props) {
   );
 
   return (
-    <div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
       <div
         className="hover-container"
         onTouchMove={handleCursorMove}

@@ -1,4 +1,5 @@
 .hover-container {
+  width: fit-content;
   position: relative;
   touch-action: none;
 }
