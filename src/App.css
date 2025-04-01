@@ -4,16 +4,21 @@
   touch-action: none;
 }
 
+#root {
+  width: 100vw;
+}
+
 .main-container {
   max-width: 1280px;
-  margin: 0 auto;
   text-align: center;
 
   display: flex;
   flex-direction: row;
   gap: 2rem;
-  min-width: calc(100vw - 2rem);
+  width: fit-content;
   justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 1rem;
 }
 
