@@ -323,9 +323,11 @@ function App() {
     };
 
     window.addEventListener('resize', handleResize);
+    document.addEventListener('readystatechange', handleResize);
     handleResize(); // Call initially to set dimensions
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('readystatechange', handleResize);
     };
   }, []);
 
