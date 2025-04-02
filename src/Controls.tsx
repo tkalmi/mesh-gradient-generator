@@ -34,14 +34,14 @@ function Tooltip(props: TooltipProps) {
           />
         </svg>
       </button>
-      <div
+      <dialog
         className="tooltip-popover-content"
         role="tooltip"
         popover="auto"
         id={tooltipKeyRef.current}
       >
         {children}
-      </div>
+      </dialog>
       <div className="tooltip-hover-content" role="tooltip">
         {children}
       </div>
